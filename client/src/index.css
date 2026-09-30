@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-canvas font-sans text-ink antialiased; }
+  h1, h2, h3 { letter-spacing: -0.02em; }
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-line bg-white shadow-card; }
+  .eyebrow { @apply text-[11px] font-medium uppercase tracking-wider text-ink-soft; }
+}

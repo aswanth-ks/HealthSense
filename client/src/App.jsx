@@ -1,0 +1,34 @@
+import { Routes, Route } from 'react-router-dom';
+import AppLayout from './components/layout/AppLayout.jsx';
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import LiveMonitoring from './pages/LiveMonitoring.jsx';
+import HealthTrends from './pages/HealthTrends.jsx';
+import History from './pages/History.jsx';
+import AIInsights from './pages/AIInsights.jsx';
+import Alerts from './pages/Alerts.jsx';
+import MyWatch from './pages/MyWatch.jsx';
+import Settings from './pages/Settings.jsx';
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/live" element={<LiveMonitoring />} />
+          <Route path="/trends" element={<HealthTrends />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/insights" element={<AIInsights />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/watch" element={<MyWatch />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
