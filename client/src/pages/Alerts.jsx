@@ -7,12 +7,14 @@ import Toggle from '../components/common/Toggle.jsx';
 import QuestionCard from '../components/questions/QuestionCard.jsx';
 import useQuestions from '../hooks/useQuestions.js';
 import { useInput } from '../context/InputContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
+import { Link } from 'react-router-dom';
 
-const INITIAL_RULES = [
-  { key: 'hr', label: 'Heart Rate', range: '60 – 100 BPM', on: true },
-  { key: 'spo2', label: 'Blood Oxygen', range: '≥ 95 %', on: true },
-  { key: 'temp', label: 'Temperature', range: '36.0 – 37.5 °C', on: true },
-  { key: 'bp', label: 'Blood Pressure', range: '90/60 – 130/85 mmHg', on: true },
+const rulesFor = (r = {}) => [
+  { key: 'hr', label: 'Heart Rate', text: `Below ${r.hrMin ?? 60} or above ${r.hrMax ?? 100} BPM`, on: true },
+  { key: 'spo2', label: 'Blood Oxygen', text: `Below ${r.spo2Min ?? 95}%`, on: true },
+  { key: 'temp', label: 'Temperature', text: `Below ${r.tempMin ?? 36} or above ${r.tempMax ?? 37.5} °C`, on: true },
+  { key: 'bp', label: 'Blood Pressure', text: 'Systolic below 90 or above 130 mmHg', on: true },
 ];
 
 const answerText = (q) => (typeof q.answer === 'boolean' ? (q.answer ? 'Yes' : 'No') : `${q.answer}${q.unit ? ` ${q.unit}` : ''}`);
@@ -20,7 +22,8 @@ const when = (d) => (d ? new Date(d).toLocaleString('en-US', { month: 'short', d
 
 export default function Alerts() {
   const [tab, setTab] = useState('Open');
-  const [rules, setRules] = useState(INITIAL_RULES);
+  const { user } = useAuth();
+  const [rules, setRules] = useState(() => rulesFor(user?.ranges));
   const open = useQuestions('open');
   const answered = useQuestions('answered');
   const { openCheckin } = useInput();
@@ -82,13 +85,13 @@ export default function Alerts() {
         )}
       </section>
 
-      <Card eyebrow="Configuration" title="Alert Rules" action={<BellRing size={18} className="text-ink-soft" />}>
+      <Card eyebrow="Configuration" title="Alert rules" action={<Link to="/settings" className="flex items-center gap-1.5 text-xs text-brand-700 hover:underline"><BellRing size={14} /> Edit ranges</Link>}>
         <ul className="divide-y divide-line border-t border-line">
           {rules.map((r) => (
             <li key={r.key} className="flex items-center justify-between gap-4 py-4">
               <div>
                 <p className="text-sm font-medium">{r.label}</p>
-                <p className="mt-1 text-xs text-ink-mute">Alert outside {r.range}</p>
+                <p className="mt-1 text-xs text-ink-mute">Alert when {r.text.charAt(0).toLowerCase() + r.text.slice(1)}</p>
               </div>
               <Toggle checked={r.on} onChange={(v) => toggle(r.key, v)} label={`${r.label} alerts`} />
             </li>

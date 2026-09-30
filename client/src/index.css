@@ -4,6 +4,8 @@
 
 @layer base {
   body { @apply bg-canvas font-sans text-ink antialiased; }
+  /* Grid/flex children may shrink below their content width (prevents long text from widening the page on phones) */
+  .grid > *, .card { min-width: 0; }
   h1, h2, h3 { letter-spacing: -0.02em; }
 }
 

@@ -61,7 +61,7 @@ export default function LiveMonitoring() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Real-time sensor command center</p>
-          <h1 className="mt-3 text-4xl font-medium">Live Monitoring</h1>
+          <h1 className="mt-3 text-3xl font-medium sm:text-4xl">Live Monitoring</h1>
           <p className="mt-2 text-ink-soft">Watch the latest readings arriving from your connected HealthSense Watch.</p>
         </div>
         <div className="card flex items-center gap-3 px-4 py-3">

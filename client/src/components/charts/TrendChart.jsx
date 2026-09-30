@@ -18,7 +18,7 @@ export default function TrendChart({ data, color, unit, domain, band }) {
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} stroke="#e4ebe9" />
-        {band && <ReferenceArea y1={band.lo} y2={band.hi} fill="#1f9a86" fillOpacity={0.07} stroke="none" ifOverflow="extendDomain" />}
+        {band && <ReferenceArea y1={band.lo} y2={band.hi} fill="#1f9a86" fillOpacity={0.07} stroke="none" />}
         <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#8a9895' }} interval="preserveStartEnd" minTickGap={50} />
         <YAxis hide domain={yDomain} />
         <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e4ebe9', fontSize: 12 }} formatter={(v) => [`${v} ${unit}`, '']} separator="" />

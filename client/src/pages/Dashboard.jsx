@@ -34,7 +34,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">{formatDate()}</p>
-          <h1 className="mt-3 text-4xl font-medium">{greeting()}, {(user?.name || data.user.name).split(' ')[0]}</h1>
+          <h1 className="mt-3 text-3xl font-medium sm:text-4xl">{greeting()}, {(user?.name || data.user.name).split(' ')[0]}</h1>
           <p className="mt-2 text-ink-soft">Here&apos;s your health monitoring summary for today.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -64,8 +64,8 @@ export default function Dashboard() {
             </div>
             {questions.length > 2 && <Link to="/alerts" className="text-xs text-brand-700 hover:underline">See all →</Link>}
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {questions.slice(0, 2).map((q) => <QuestionCard key={q.id} question={q} compact onDone={reload} />)}
+          <div className={`grid gap-4 ${questions.length > 1 ? 'lg:grid-cols-2' : ''}`}>
+            {questions.slice(0, 2).map((q) => <QuestionCard key={q.id} question={q} compact={questions.length > 1} onDone={reload} />)}
           </div>
         </section>
       )}
@@ -87,16 +87,16 @@ export default function Dashboard() {
       </section>
 
       {/* 4. What is being watched */}
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid items-start gap-5 lg:grid-cols-3">
         <HeartRateChart />
-        <FocusCard focus={focus} />
+        <div className="space-y-5">
+          <FocusCard focus={focus} />
+          <WearableCard device={data.device} />
+        </div>
       </div>
 
       {/* 5. What happened */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <RecentEvents className="lg:col-span-2" />
-        <WearableCard device={data.device} />
-      </div>
+      <RecentEvents />
     </div>
   );
 }

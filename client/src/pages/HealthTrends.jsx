@@ -23,13 +23,16 @@ export default function HealthTrends() {
 
   const b = data?.baseline;
   const g = data?.glance;
+  const [stableN, totalN] = (g?.stable || '0/0').split('/').map(Number);
+  const unstable = totalN - stableN;
+  const allStable = g && unstable === 0;
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Clinical analytics</p>
-          <h1 className="mt-3 text-4xl font-medium">Health Trends</h1>
+          <h1 className="mt-3 text-3xl font-medium sm:text-4xl">Health Trends</h1>
           <p className="mt-2 text-ink-soft">Understand how your monitored readings change over time.</p>
         </div>
         <span className="card flex items-center gap-2 px-4 py-2.5 text-xs text-ink-soft">
@@ -65,16 +68,19 @@ export default function HealthTrends() {
         <div className="md:pr-6">
           <p className="eyebrow">At a glance</p>
           <h2 className="mt-3 text-lg font-medium">
-            {!g ? 'Loading…' : g.exceptions === 0 ? 'Readings remain within configured ranges' : `${g.exceptions} period(s) outside configured ranges`}
+            {!g ? 'Loading…'
+              : g.available === 0 ? 'No readings in this period yet'
+              : allStable ? 'Your vitals are within your personal range'
+              : `${unstable} vital${unstable > 1 ? 's' : ''} outside your personal range`}
           </h2>
           <p className="mt-1 text-xs text-ink-mute">
-            {g && g.available === 0 ? 'No readings in this period yet.' : `Shaded bands on each chart show your personal normal range.`}
+            {b?.established ? 'The shaded band on each chart is your personal normal range.' : 'Your personal range appears once your baseline is learned (3 complete days).'}
           </p>
         </div>
         {[
           [g?.stable ?? '—', 'Parameters stable'],
           [g?.avgSignal == null ? '—' : `${g.avgSignal}%`, 'Average signal quality'],
-          [g?.exceptions ?? '—', 'Range exceptions'],
+          [g?.exceptions ?? '—', 'Time periods outside standard ranges'],
         ].map(([v, l]) => (
           <div key={l} className="md:border-l md:border-line md:pl-6">
             <p className="text-3xl font-medium text-brand-700">{v}</p>
