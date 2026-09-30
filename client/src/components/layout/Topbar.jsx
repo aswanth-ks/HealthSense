@@ -1,6 +1,7 @@
 import { Bell, ChevronDown } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAuth, initials } from '../../context/AuthContext.jsx';
+import useLiveStream from '../../hooks/useLiveStream.js';
 
 const TITLES = {
   '/': 'Overview', '/live': 'Live Monitoring', '/trends': 'Health Trends', '/history': 'History',
@@ -10,6 +11,7 @@ const TITLES = {
 export default function Topbar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const { connected } = useLiveStream();
   return (
     <header className="mx-4 flex items-center justify-between border-b border-line py-4 sm:mx-8">
       <div className="text-sm text-ink-mute">
@@ -22,7 +24,7 @@ export default function Topbar() {
           <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-red-500" />
         </button>
         <span className="hidden items-center gap-2 text-ink-soft sm:flex">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Watch Connected
+          <span className={`h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-ink-mute'}`} /> {connected ? 'Watch Connected' : 'Watch Offline'}
         </span>
         <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-xs font-medium text-brand-900">{initials(user?.name)}</span>
         <ChevronDown size={16} className="text-ink-soft" />

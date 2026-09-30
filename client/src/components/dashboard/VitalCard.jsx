@@ -1,6 +1,7 @@
-import { HeartPulse, Droplets, Thermometer, Activity, CheckCircle2 } from 'lucide-react';
+import { HeartPulse, Droplets, Thermometer, Activity, CheckCircle2, AlertCircle } from 'lucide-react';
 import Sparkline from '../charts/Sparkline.jsx';
 import LiveDot from '../common/LiveDot.jsx';
+import SourceBadge from '../common/SourceBadge.jsx';
 
 const META = {
   hr: { icon: HeartPulse, color: '#d94452', tint: 'bg-red-50', top: 'border-t-red-300' },
@@ -19,12 +20,20 @@ export default function VitalCard({ vital }) {
         </span>
         <LiveDot />
       </div>
-      <p className="mt-4 text-sm text-ink-soft">{vital.label}</p>
+      <p className="mt-4 flex items-center gap-2 text-sm text-ink-soft">
+        {vital.label}
+        <SourceBadge source={vital.source} confidence={vital.confidence} />
+      </p>
       <p className="mt-1 text-3xl font-medium tracking-tight">
         {vital.value} <span className="text-xs font-normal text-ink-mute">{vital.unit}</span>
       </p>
       <div className="mt-auto flex items-end justify-between text-xs text-ink-soft">
-        <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-brand-600" /> {vital.status}</span>
+        <span className="flex items-center gap-1.5">
+          {vital.status === 'Normal' || vital.status === 'Stable'
+            ? <CheckCircle2 size={14} className="text-brand-600" />
+            : <AlertCircle size={14} className={vital.status === 'No data' ? 'text-ink-mute' : 'text-amber-600'} />}
+          {vital.status}
+        </span>
         <span className="z-10 text-ink-mute">{vital.delta}</span>
       </div>
       <div className="pointer-events-none absolute bottom-0 right-0 h-14 w-2/3 opacity-90">

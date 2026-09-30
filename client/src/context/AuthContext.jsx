@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import api from '../services/api.js';
+import { closeSocket } from '../services/socket.js';
 
 const AuthContext = createContext(null);
 
@@ -30,7 +31,7 @@ export function AuthProvider({ children }) {
     login: (email, password) => api.post('/auth/login', { email, password }).then(({ data }) => handleAuth(data)),
     register: (payload) => api.post('/auth/register', payload).then(({ data }) => handleAuth(data)),
     enterDemo: () => { write('demo', '1'); write('token', null); setUser(DEMO_USER); },
-    logout: () => { write('token', null); write('demo', null); setUser(null); },
+    logout: () => { closeSocket(); write('token', null); write('demo', null); setUser(null); },
     updateUser: setUser,
   };
 

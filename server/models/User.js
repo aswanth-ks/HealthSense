@@ -35,6 +35,16 @@ const userSchema = new mongoose.Schema(
     },
     // Used by ESP32 / simulator to post readings for this user
     deviceId: { type: String, default: '' },
+    device: {
+      firmware: String,
+      battery: Number,
+      transport: { type: String, default: 'wifi' },
+      lastSeen: Date,
+      firstSeen: Date,
+      packets: { type: Number, default: 0 },
+      latencyMs: Number,
+      mode: { type: String, enum: ['sensor', 'simulation', ''], default: '' },
+    },
     deviceKey: { type: String, default: () => crypto.randomBytes(16).toString('hex'), select: false },
     clinicianIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },

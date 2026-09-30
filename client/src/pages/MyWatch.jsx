@@ -1,37 +1,45 @@
-import { useState } from 'react';
-import { Watch, Wifi, RefreshCw, HeartPulse, Droplets, Thermometer, Activity } from 'lucide-react';
+import { Watch, Wifi, WifiOff, HeartPulse, Thermometer, Wind, Move } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
 import Card from '../components/common/Card.jsx';
 import LiveDot from '../components/common/LiveDot.jsx';
+import ConnectDeviceCard from '../components/dashboard/ConnectDeviceCard.jsx';
+import useLiveStream from '../hooks/useLiveStream.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
+// Hardware from the MVP spec (§27-B)
 const SENSORS = [
-  { label: 'Heart rate (PPG)', icon: HeartPulse },
-  { label: 'Blood oxygen (SpO₂)', icon: Droplets },
-  { label: 'Skin temperature', icon: Thermometer },
-  { label: 'Blood pressure', icon: Activity },
+  { label: 'MAX30102', detail: 'Heart rate + SpO₂', icon: HeartPulse, metrics: ['hr', 'spo2'] },
+  { label: 'MPU6050', detail: 'Movement + body position', icon: Move, metrics: ['movement'] },
+  { label: 'Respiration sensor', detail: 'Breathing rate / pattern', icon: Wind, metrics: ['resp'] },
+  { label: 'Temperature sensor', detail: 'Temperature trend', icon: Thermometer, metrics: ['temp'] },
 ];
 
+const time = (d) => (d ? d.toLocaleTimeString('en-US') : '—');
+
 export default function MyWatch() {
-  const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState('10:27:08 AM');
+  const s = useLiveStream();
+  const { user } = useAuth();
+  const on = s.connected;
 
-  const sync = () => {
-    setSyncing(true);
-    setTimeout(() => { setSyncing(false); setLastSync(new Date().toLocaleTimeString('en-US')); }, 1200);
-  };
-
-  const details = [['Device ID', 'HS-WATCH-001'], ['Firmware', 'v1.4.2'], ['Connection', 'Wi-Fi'], ['Last sync', lastSync]];
+  const details = [
+    ['Device ID', s.deviceId],
+    ['Mode', s.mode === 'simulation' ? 'Simulation' : s.mode === 'sensor' ? 'ESP32 sensor' : '—'],
+    ['Connection', on ? 'Wi-Fi' : 'Offline'],
+    ['Last data', time(s.lastPacket)],
+    ['Packets received', s.packets.toLocaleString()],
+    ['Latency', s.latency == null ? '—' : `${s.latency} ms`],
+  ];
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Connected wearable"
         title="My Watch"
-        subtitle="Manage your HealthSense Watch and its sensors."
+        subtitle="Manage your HealthSense Watch, its sensors and how it sends data."
         right={
-          <button onClick={sync} disabled={syncing} className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60">
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> {syncing ? 'Syncing…' : 'Sync now'}
-          </button>
+          <span className={`card flex items-center gap-2 px-4 py-2.5 text-xs ${on ? 'text-brand-900' : 'text-ink-soft'}`}>
+            <LiveDot className={on ? '' : '!bg-ink-mute'} /> {on ? 'Receiving data' : 'Not connected'}
+          </span>
         }
       />
 
@@ -40,7 +48,11 @@ export default function MyWatch() {
           eyebrow="Device"
           title="HealthSense Watch"
           className="lg:col-span-2"
-          action={<span className="flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-xs text-brand-900"><LiveDot /> Connected</span>}
+          action={
+            <span className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs ${on ? 'bg-brand-50 text-brand-900' : 'bg-canvas text-ink-soft'}`}>
+              <LiveDot className={on ? '' : '!bg-ink-mute'} /> {on ? 'Connected' : 'Offline'}
+            </span>
+          }
         >
           <div className="flex flex-col gap-6 sm:flex-row">
             <span className="grid h-32 w-32 shrink-0 place-items-center rounded-3xl bg-brand-50 text-brand-600"><Watch size={56} strokeWidth={1.2} /></span>
@@ -48,7 +60,10 @@ export default function MyWatch() {
               {details.map(([k, v]) => (
                 <div key={k}>
                   <dt className="text-xs text-ink-mute">{k}</dt>
-                  <dd className="mt-1 flex items-center gap-1.5 font-medium">{k === 'Connection' && <Wifi size={14} className="text-brand-600" />}{v}</dd>
+                  <dd className="mt-1 flex items-center gap-1.5 font-medium">
+                    {k === 'Connection' && (on ? <Wifi size={14} className="text-brand-600" /> : <WifiOff size={14} className="text-ink-mute" />)}
+                    {v}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -56,27 +71,35 @@ export default function MyWatch() {
         </Card>
 
         <Card eyebrow="Power" title="Battery">
-          <p className="text-4xl font-medium text-brand-700">84%</p>
-          <div className="mt-4 h-1.5 rounded-full bg-line"><div className="h-full w-[84%] rounded-full bg-brand-500" /></div>
-          <p className="mt-3 text-xs text-ink-mute">About 2 days remaining</p>
+          <p className="text-4xl font-medium text-brand-700">{s.battery == null ? '—' : `${s.battery}%`}</p>
+          <div className="mt-4 h-1.5 rounded-full bg-line"><div className="h-full rounded-full bg-brand-500" style={{ width: `${s.battery ?? 0}%` }} /></div>
+          <p className="mt-3 text-xs text-ink-mute">{s.battery == null ? 'Reported by the device once connected' : s.battery < 20 ? 'Charge soon' : 'Battery level is fine'}</p>
         </Card>
       </div>
 
       <Card eyebrow="Hardware" title="Sensors">
         <ul className="divide-y divide-line border-t border-line">
-          {SENSORS.map(({ label, icon: Icon }) => (
-            <li key={label} className="flex items-center gap-4 py-4 text-sm">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600"><Icon size={18} /></span>
-              <span className="flex-1 font-medium">{label}</span>
-              <span className="flex items-center gap-1.5 text-xs text-ink-soft"><LiveDot className="!h-1.5 !w-1.5" /> Active</span>
-            </li>
-          ))}
+          {SENSORS.map(({ label, detail, icon: Icon, metrics }) => {
+            const signals = metrics.map((m) => s.signal[m]).filter((v) => v != null);
+            const ok = on && signals.length > 0;
+            return (
+              <li key={label} className="flex flex-wrap items-center gap-4 py-4 text-sm">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600"><Icon size={18} /></span>
+                <div className="flex-1">
+                  <p className="font-medium">{label}</p>
+                  <p className="text-xs text-ink-mute">{detail}</p>
+                </div>
+                {signals.length > 0 && <span className="text-xs text-ink-soft">Signal {Math.round(signals.reduce((a, b) => a + b, 0) / signals.length)}%</span>}
+                <span className="flex w-16 items-center gap-1.5 text-xs text-ink-soft">
+                  <LiveDot className={`!h-1.5 !w-1.5 ${ok ? '' : '!bg-ink-mute'}`} /> {ok ? 'Active' : 'Idle'}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </Card>
 
-      <div>
-        <button className="rounded-xl border border-line bg-white px-4 py-2.5 text-xs font-medium text-red-600 hover:bg-red-50">Disconnect watch</button>
-      </div>
+      <ConnectDeviceCard email={user?.email} />
     </div>
   );
 }
