@@ -24,6 +24,6 @@ const cycleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-cycleSchema.index({ userId: 1, index: -1 }, { unique: true });
+cycleSchema.index({ userId: 1, start: -1 }, { unique: true });
 
 export default mongoose.model('Cycle', cycleSchema);

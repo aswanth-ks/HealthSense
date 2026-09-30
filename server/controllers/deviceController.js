@@ -1,6 +1,7 @@
 import Reading, { METRICS } from '../models/Reading.js';
 import { asyncHandler, httpError } from '../middleware/errorHandler.js';
 import { emitToUser } from '../utils/realtime.js';
+import { scheduleCycleUpdate } from '../services/cycleService.js';
 
 const MAX_BATCH = 5000;
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -35,7 +36,10 @@ export const ingest = asyncHandler(async (req, res) => {
       deviceId: deviceId || req.user.deviceId,
     });
   }
-  if (docs.length) await Reading.insertMany(docs, { ordered: false });
+  if (docs.length) {
+    await Reading.insertMany(docs, { ordered: false });
+    scheduleCycleUpdate(req.user._id);
+  }
 
   // Device status
   const newest = docs.reduce((m, d) => Math.max(m, d.ts.getTime()), 0);

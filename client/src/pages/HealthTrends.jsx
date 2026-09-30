@@ -1,40 +1,28 @@
-import { useMemo, useState } from 'react';
-import { Clock, ChevronDown, TrendingUp, Minus, CheckCircle2, BarChart3, HeartPulse, Droplets, Thermometer } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Clock, TrendingUp, TrendingDown, Minus, CheckCircle2, AlertCircle, BarChart3, HeartPulse, Droplets, Thermometer, Wind, Activity, GraduationCap } from 'lucide-react';
 import Card from '../components/common/Card.jsx';
 import LiveDot from '../components/common/LiveDot.jsx';
 import TrendChart from '../components/charts/TrendChart.jsx';
+import { getTrends } from '../services/healthService.js';
 
-const RANGES = { '24H': { n: 48, label: 'last 24 hours' }, '7D': { n: 56, label: 'last 7 days' }, '30D': { n: 60, label: 'last 30 days' } };
+const RANGES = { '24H': 'last 24 hours', '7D': 'last 7 days', '30D': 'last 30 days' };
+const COLORS = { hr: '#d94452', spo2: '#1f9a86', temp: '#b8790f', bp: '#1f6aa5', resp: '#6b7fd7' };
+const ICONS = { hr: HeartPulse, spo2: Droplets, temp: Thermometer, bp: Activity, resp: Wind };
 
-const VITALS = [
-  { key: 'hr', label: 'Heart Rate', value: '79', unit: 'BPM', color: '#d94452', base: 78, amp: 3, domain: [60, 95] },
-  { key: 'spo2', label: 'Blood Oxygen', value: '98', unit: '% SpO₂', color: '#1f9a86', base: 98, amp: 0.6, domain: [90, 100] },
-  { key: 'temp', label: 'Temperature', value: '36.7', unit: '°C', color: '#b8790f', base: 36.6, amp: 0.15, domain: [35.5, 37.5] },
-  { key: 'bp', label: 'Blood Pressure', value: '120 / 80', unit: 'mmHg', color: '#1f6aa5', base: 120, amp: 2.5, domain: [100, 140] },
-];
-
-const BASELINE = [
-  { label: 'Heart Rate', icon: HeartPulse, now: '79 BPM', delta: '+2%', up: true, avg: '76 BPM avg' },
-  { label: 'Blood Oxygen', icon: Droplets, now: '98%', delta: '0%', avg: '98% avg' },
-  { label: 'Temperature', icon: Thermometer, now: '36.7°C', delta: '0%', avg: '36.7°C avg' },
-];
-
-function series(v, n, range) {
-  const seed = v.key.length + n;
-  return Array.from({ length: n }, (_, i) => {
-    const raw = v.base + v.amp * (Math.sin(i / 5 + seed) * 0.6 + Math.cos(i / 11) * 0.4);
-    const h = range === '24H' ? (i * 24) / n : null;
-    const label = range === '24H'
-      ? `${Math.floor(h % 12) || 12} ${h % 24 < 12 ? 'AM' : 'PM'}`
-      : range === '7D' ? `D${Math.floor(i / 8) + 1}` : `Day ${Math.floor(i / 2) + 1}`;
-    return { label, v: +raw.toFixed(v.key === 'temp' ? 2 : 0) };
-  });
-}
+const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function HealthTrends() {
   const [range, setRange] = useState('24H');
-  const { n, label } = RANGES[range];
-  const charts = useMemo(() => VITALS.map((v) => ({ ...v, data: series(v, n, range) })), [n, range]);
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    getTrends(range).then((d) => alive && setData(d)).catch(() => {});
+    return () => { alive = false; };
+  }, [range]);
+
+  const b = data?.baseline;
+  const g = data?.glance;
 
   return (
     <div className="space-y-8">
@@ -44,14 +32,21 @@ export default function HealthTrends() {
           <h1 className="mt-3 text-4xl font-medium">Health Trends</h1>
           <p className="mt-2 text-ink-soft">Understand how your monitored readings change over time.</p>
         </div>
-        <button className="card flex items-center gap-2 px-4 py-2.5 text-xs text-ink-soft">
-          <Clock size={14} /> Oct 24, 2024 <ChevronDown size={14} />
-        </button>
+        <span className="card flex items-center gap-2 px-4 py-2.5 text-xs text-ink-soft">
+          <Clock size={14} /> {today()}
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-y border-line py-3 text-xs">
-        <span className="flex items-center gap-2 text-ink-soft">
-          <LiveDot /> <span className="font-medium text-ink">HealthSense Watch</span> · <span className="text-ink-mute">4 parameters available</span>
+        <span className="flex flex-wrap items-center gap-2 text-ink-soft">
+          <LiveDot /> <span className="font-medium text-ink">HealthSense Watch</span> ·
+          <span className="text-ink-mute">{g ? `${g.available} parameters available` : 'Loading…'}</span>
+          {b && (
+            <span className={`ml-1 flex items-center gap-1.5 rounded-full px-2.5 py-1 ${b.established ? 'bg-brand-50 text-brand-900' : 'bg-amber-50 text-amber-700'}`}>
+              <GraduationCap size={13} />
+              {b.established ? 'Personal baseline established' : `Learning your baseline · ${b.daysUsed}/3 days`}
+            </span>
+          )}
         </span>
         <div className="flex rounded-xl bg-white/60 p-1">
           {Object.keys(RANGES).map((r) => (
@@ -69,10 +64,18 @@ export default function HealthTrends() {
       <section className="card grid gap-6 p-6 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:gap-0">
         <div className="md:pr-6">
           <p className="eyebrow">At a glance</p>
-          <h2 className="mt-3 text-lg font-medium">Readings remain within configured ranges</h2>
-          <p className="mt-1 text-xs text-ink-mute">All four parameters have been consistently available across the selected period.</p>
+          <h2 className="mt-3 text-lg font-medium">
+            {!g ? 'Loading…' : g.exceptions === 0 ? 'Readings remain within configured ranges' : `${g.exceptions} period(s) outside configured ranges`}
+          </h2>
+          <p className="mt-1 text-xs text-ink-mute">
+            {g && g.available === 0 ? 'No readings in this period yet.' : `Shaded bands on each chart show your personal normal range.`}
+          </p>
         </div>
-        {[['4/4', 'Parameters stable'], ['98%', 'Average signal quality'], ['0', 'Range exceptions']].map(([v, l]) => (
+        {[
+          [g?.stable ?? '—', 'Parameters stable'],
+          [g?.avgSignal == null ? '—' : `${g.avgSignal}%`, 'Average signal quality'],
+          [g?.exceptions ?? '—', 'Range exceptions'],
+        ].map(([v, l]) => (
           <div key={l} className="md:border-l md:border-line md:pl-6">
             <p className="text-3xl font-medium text-brand-700">{v}</p>
             <p className="mt-2 text-xs text-ink-mute">{l}</p>
@@ -86,11 +89,11 @@ export default function HealthTrends() {
             <p className="eyebrow">Measured data</p>
             <h2 className="mt-2 text-xl font-medium">Vital Trends</h2>
           </div>
-          <span className="text-xs text-brand-700/70">Showing {label}</span>
+          <span className="text-xs text-brand-700/70">Showing {RANGES[range]}</span>
         </div>
         <div className="grid gap-5 md:grid-cols-2">
-          {charts.map((c) => (
-            <div key={c.key} className="card p-5">
+          {(data?.vitals || []).map((c, i, all) => (
+            <div key={c.key} className={`card p-5 ${i === all.length - 1 && all.length % 2 ? 'md:col-span-2' : ''}`}>
               <div className="flex items-start justify-between">
                 <p className="text-sm text-ink-soft">{c.label}</p>
                 <span className="rounded-md bg-canvas px-2 py-1 text-[10px] text-ink-mute">{range}</span>
@@ -99,7 +102,19 @@ export default function HealthTrends() {
                 {c.value} <span className="text-[11px] font-normal text-ink-mute">{c.unit}</span>
               </p>
               <div className="mt-4 h-40 border-t border-line pt-2">
-                <TrendChart data={c.data} color={c.color} unit={c.unit} domain={c.domain} />
+                {c.data.length ? (
+                  <TrendChart data={c.data} color={COLORS[c.key]} unit={c.unit} band={c.band} />
+                ) : (
+                  <p className="grid h-full place-items-center text-xs text-ink-mute">No readings in this period</p>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-mute">
+                {c.band ? (
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-3 rounded-sm bg-brand-500/20" /> Your normal: {c.band.lo}–{c.band.hi}</span>
+                ) : <span>Personal band not available yet</span>}
+                {c.interpretation && c.interpretation.band !== 'typical' && (
+                  <span className="text-amber-700">{c.interpretation.band.replace('_', ' ')}</span>
+                )}
               </div>
             </div>
           ))}
@@ -109,21 +124,28 @@ export default function HealthTrends() {
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <Card
           eyebrow="Reference view"
-          title="Today vs recent baseline"
-          action={<span className="rounded-md bg-canvas px-2.5 py-1 text-[11px] text-ink-soft">7-day baseline</span>}
+          title="This period vs your baseline"
+          action={<span className="rounded-md bg-canvas px-2.5 py-1 text-[11px] text-ink-soft">{b?.established ? `${b.daysUsed}-day baseline` : 'Baseline learning'}</span>}
         >
-          <ul className="divide-y divide-line border-t border-line text-sm">
-            {BASELINE.map(({ label: l, icon: Icon, now, delta, up, avg }) => (
-              <li key={l} className="grid grid-cols-[1.2fr_1fr_1fr_1fr] items-center py-3">
-                <span className="flex items-center gap-2 text-ink-soft"><Icon size={15} /> {l}</span>
-                <span className="font-medium">{now}</span>
-                <span className={`flex items-center gap-1 text-xs ${up ? 'text-red-500' : 'text-ink-mute'}`}>
-                  {up ? <TrendingUp size={13} /> : <Minus size={13} />} {delta}
-                </span>
-                <span className="text-right text-xs text-ink-mute">{avg}</span>
-              </li>
-            ))}
-          </ul>
+          {data?.comparison?.length ? (
+            <ul className="divide-y divide-line border-t border-line text-sm">
+              {data.comparison.map(({ key, label: l, now, delta, up, down, base }) => {
+                const Icon = ICONS[key] || Activity;
+                return (
+                  <li key={l} className="grid grid-cols-[1.2fr_1fr_1fr_1fr] items-center py-3">
+                    <span className="flex items-center gap-2 text-ink-soft"><Icon size={15} /> {l}</span>
+                    <span className="font-medium">{now}</span>
+                    <span className={`flex items-center gap-1 text-xs ${up ? 'text-red-500' : down ? 'text-blue-600' : 'text-ink-mute'}`}>
+                      {up ? <TrendingUp size={13} /> : down ? <TrendingDown size={13} /> : <Minus size={13} />} {delta}
+                    </span>
+                    <span className="text-right text-xs text-ink-mute">{base}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="border-t border-line pt-4 text-sm text-ink-soft">A comparison appears once your baseline has at least 3 complete days of data.</p>
+          )}
         </Card>
 
         <section className="card p-6">
@@ -134,10 +156,12 @@ export default function HealthTrends() {
               <h2 className="mt-1 text-lg font-medium">What the trend shows</h2>
             </div>
           </div>
-          <p className="mt-6 text-sm leading-relaxed text-ink-soft">
-            Heart rate is tracking slightly above your recent baseline while oxygen, temperature, and blood pressure remain steady.
-          </p>
-          <p className="mt-5 flex items-center gap-2 text-xs text-brand-700"><CheckCircle2 size={14} /> No unusual patterns detected</p>
+          <p className="mt-6 text-sm leading-relaxed text-ink-soft">{data?.summary || 'Loading…'}</p>
+          {data && (
+            data.unusual
+              ? <p className="mt-5 flex items-center gap-2 text-xs text-amber-700"><AlertCircle size={14} /> Deviation from your personal baseline</p>
+              : <p className="mt-5 flex items-center gap-2 text-xs text-brand-700"><CheckCircle2 size={14} /> No unusual patterns detected</p>
+          )}
         </section>
       </div>
     </div>

@@ -34,7 +34,9 @@ export function sample(date, persona, profile = 'normal', opts = {}) {
 
   // Activity
   const activeBurst = !asleep && Math.random() < 0.18;
-  let movement = asleep ? Math.abs(gauss(0.03)) : activeBurst ? rand(0.5, 1) : rand(0.05, 0.35);
+  // ~10% of the night is spent awake / restless (brief awakenings, falling asleep)
+  const nightWake = asleep && Math.random() < 0.1;
+  let movement = asleep ? (nightWake ? rand(0.15, 0.4) : Math.abs(gauss(0.03))) : activeBurst ? rand(0.5, 1) : rand(0.05, 0.35);
   if (flare) movement *= asleep ? 2.2 : 0.55; // restless nights, less daytime activity
   const stepsPerMin = asleep ? 0 : activeBurst ? persona.stepsPerMin * rand(3, 6) : persona.stepsPerMin * rand(0, 1.2);
   const steps = Math.round(stepsPerMin * (intervalSec / 60) * (flare ? 0.5 : 1));
@@ -83,4 +85,5 @@ export function sample(date, persona, profile = 'normal', opts = {}) {
   };
 }
 
-export const DEFAULT_PERSONA = { hrBase: 74, spo2Base: 98, tempBase: 36.6, respBase: 15, sysBase: 120, diaBase: 80, stepsPerMin: 12 };
+// stepsPerMin 5 ≈ 6,000–8,000 steps/day with the activity bursts above
+export const DEFAULT_PERSONA = { hrBase: 74, spo2Base: 98, tempBase: 36.6, respBase: 15, sysBase: 120, diaBase: 80, stepsPerMin: 5 };
