@@ -11,7 +11,7 @@ const META = {
 };
 
 export default function VitalCard({ vital }) {
-  const { icon: Icon, color, tint, top } = META[vital.key];
+  const { icon: Icon, color, tint, top } = META[vital.key] || { icon: Activity, color: '#5b6b68', tint: 'bg-canvas', top: 'border-t-transparent' };
   return (
     <div className={`card relative flex h-48 flex-col overflow-hidden border-t-2 p-6 ${top}`}>
       <div className="flex items-start justify-between">

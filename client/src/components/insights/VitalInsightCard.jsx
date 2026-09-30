@@ -1,4 +1,4 @@
-import { HeartPulse, Droplets, Thermometer, Activity, TrendingUp, Minus } from 'lucide-react';
+import { HeartPulse, Droplets, Thermometer, Activity, Wind, TrendingUp, Minus } from 'lucide-react';
 import Sparkline from '../charts/Sparkline.jsx';
 import RangeBar from './RangeBar.jsx';
 
@@ -7,10 +7,12 @@ const META = {
   spo2: { icon: Droplets, color: '#1f9a86', tint: 'bg-brand-50' },
   temp: { icon: Thermometer, color: '#c8892f', tint: 'bg-amber-50' },
   bp: { icon: Activity, color: '#4a7fc1', tint: 'bg-blue-50' },
+  resp: { icon: Wind, color: '#6b7fd7', tint: 'bg-indigo-50' },
 };
+const FALLBACK = { icon: Activity, color: '#5b6b68', tint: 'bg-canvas' };
 
 export default function VitalInsightCard({ vital, avgLabel }) {
-  const { icon: Icon, color, tint } = META[vital.key];
+  const { icon: Icon, color, tint } = META[vital.key] || FALLBACK;
   const watch = vital.status === 'Watch';
   return (
     <section className="card flex flex-col p-6">

@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
+import ErrorBoundary from '../common/ErrorBoundary.jsx';
 import { InputProvider } from '../../context/InputContext.jsx';
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
 
   return (
     <InputProvider>
@@ -20,7 +22,9 @@ export default function AppLayout() {
         </div>
         <Topbar />
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pb-10 pt-6 sm:px-8">
-          <Outlet />
+          <ErrorBoundary resetKey={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
