@@ -1,4 +1,9 @@
+import { Link } from 'react-router-dom';
+import { ClipboardCheck } from 'lucide-react';
 import useOverview from '../hooks/useOverview.js';
+import useQuestions from '../hooks/useQuestions.js';
+import { useInput } from '../context/InputContext.jsx';
+import QuestionCard from '../components/questions/QuestionCard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, greeting } from '../utils/format.js';
 import LiveDot from '../components/common/LiveDot.jsx';
@@ -13,6 +18,8 @@ import AlertsCard from '../components/dashboard/AlertsCard.jsx';
 export default function Dashboard() {
   const data = useOverview();
   const { user } = useAuth();
+  const { openCheckin } = useInput();
+  const { questions, reload } = useQuestions('open');
   if (!data) return <p className="text-ink-soft">Loading…</p>;
 
   return (
@@ -23,10 +30,30 @@ export default function Dashboard() {
           <h1 className="mt-3 text-4xl font-medium">{greeting()}, {(user?.name || data.user.name).split(' ')[0]}</h1>
           <p className="mt-2 text-ink-soft">Here&apos;s your health monitoring summary for today.</p>
         </div>
-        <span className="card flex items-center gap-2 px-4 py-2 text-xs text-ink-soft">
-          <LiveDot /> Live data <span className="text-ink-mute">Updated {data.status.updatedAt}</span>
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="card flex items-center gap-2 px-4 py-2 text-xs text-ink-soft">
+            <LiveDot /> Live data <span className="text-ink-mute">Updated {data.status.updatedAt}</span>
+          </span>
+          <button onClick={() => openCheckin()} className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700">
+            <ClipboardCheck size={14} /> Daily check-in
+          </button>
+        </div>
       </div>
+
+      {questions?.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="eyebrow">Needs your input</p>
+              <h2 className="mt-2 text-xl font-medium">{questions.length === 1 ? 'One question for you' : `${questions.length} questions for you`}</h2>
+            </div>
+            {questions.length > 2 && <Link to="/alerts" className="text-xs text-brand-700 hover:underline">See all →</Link>}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {questions.slice(0, 2).map((q) => <QuestionCard key={q.id} question={q} compact onDone={reload} />)}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-3">
         <MonitoringStatus status={data.status} source={data.device.name} />

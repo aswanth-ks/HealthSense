@@ -7,6 +7,7 @@ import TimelineEvent from '../models/TimelineEvent.js';
 import { cycleWindow, summarizeCycle, DAY_MS } from '../engines/cycleEngine.js';
 import { buildBaseline } from '../engines/baselineEngine.js';
 import { emitToUser } from '../utils/realtime.js';
+import { analyzeRecent } from './loopService.js';
 
 const lastRun = new Map();
 const pending = new Map();
@@ -28,7 +29,7 @@ export function scheduleCycleUpdate(userId) {
   }, wait));
 }
 
-async function upsertCycle(userId, start, end, index, status) {
+export async function upsertCycle(userId, start, end, index, status) {
   const readings = await Reading.find({ userId, ts: { $gte: start, $lt: end } }).select('metric value ts source confidence -_id').lean();
   const summary = summarizeCycle(readings, start, end);
   return Cycle.findOneAndUpdate(
@@ -77,6 +78,7 @@ async function doUpdateCycles(userId, { full = false } = {}) {
   }
 
   const baseline = await recomputeBaseline(userId);
+  await analyzeRecent(userId);
   emitToUser(userId, 'cycles', { updatedAt: new Date() });
   return baseline;
 }

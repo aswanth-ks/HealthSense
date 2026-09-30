@@ -22,7 +22,17 @@ const isNight = (ts) => {
  * reported: { sleepHours?, steps? } values the user entered for this cycle (override estimates)
  * Returns aggregates, activity, sleep, completeness, confidence, missing[].
  */
-export function summarizeCycle(readings, start, end, reported = {}) {
+export function summarizeCycle(allReadings, start, end, reported = {}) {
+  // sleep/steps entered by the user or written by the missing-data engine arrive as readings too
+  const latest = (metric, source) => allReadings.filter((r) => r.metric === metric && r.source === source).sort((a, b) => b.ts - a.ts)[0];
+  const repSleep = latest('sleep', 'reported');
+  const estSleep = latest('sleep', 'estimated');
+  const repSteps = latest('steps', 'reported');
+  const estSteps = latest('steps', 'estimated');
+  if (reported.sleepHours == null && repSleep) reported = { ...reported, sleepHours: repSleep.value };
+  if (reported.steps == null && repSteps) reported = { ...reported, steps: repSteps.value };
+  const readings = allReadings.filter((r) => r.source === 'measured' && r.metric !== 'sleep');
+
   const byMetric = {};
   for (const r of readings) (byMetric[r.metric] ||= []).push(r);
 
@@ -51,6 +61,7 @@ export function summarizeCycle(readings, start, end, reported = {}) {
   let activity;
   if (reported.steps != null) activity = { steps: reported.steps, source: 'reported', confidence: 1 };
   else if (stepRows.length) activity = { steps: Math.round(stepRows.reduce((a, r) => a + r.value, 0)), source: 'measured', confidence: round((coverage.steps ?? 0) * 0.95, 2) };
+  else if (estSteps) activity = { steps: Math.round(estSteps.value), source: 'estimated', confidence: estSteps.confidence };
   else activity = { steps: null, source: null, confidence: 0 };
 
   // Sleep: reported > estimated from night-time stillness (movement < 0.1)
@@ -66,6 +77,8 @@ export function summarizeCycle(readings, start, end, reported = {}) {
       const hoursEst = round(8 * stillFrac, 1);
       const conf = round(Math.min(0.9, 0.5 + 0.05 * nightHours.size), 2);
       sleep = { hours: hoursEst, quality: null, source: 'estimated', confidence: conf };
+    } else if (estSleep) {
+      sleep = { hours: estSleep.value, quality: null, source: 'estimated', confidence: estSleep.confidence };
     } else {
       sleep = { hours: null, quality: null, source: null, confidence: 0 };
     }
@@ -82,5 +95,18 @@ export function summarizeCycle(readings, start, end, reported = {}) {
   const confs = Object.values(aggregates).map((a) => a.confidence);
   const confidence = confs.length ? round((confs.reduce((a, b) => a + b, 0) / confs.length) * (0.5 + 0.5 * completeness), 2) : 0;
 
-  return { aggregates, activity, sleep, completeness, confidence, missing };
+  const events = countNightEvents(readings);
+
+  return { aggregates, activity, sleep, completeness, confidence, missing, events };
+}
+
+// Night-time respiratory pauses / SpO2 dips (inputs to the sleep-related risk module).
+export const SPO2_DIP = 93;
+export const RESP_PAUSE = 7;
+export function countNightEvents(readings) {
+  const night = readings.filter((r) => isNight(r.ts));
+  const spo2Dips = night.filter((r) => r.metric === 'spo2' && r.value <= SPO2_DIP).length;
+  const respPauses = night.filter((r) => r.metric === 'resp' && r.value <= RESP_PAUSE).length;
+  const spo2Night = night.filter((r) => r.metric === 'spo2').length;
+  return { spo2Dips, respPauses, nightSamples: spo2Night };
 }

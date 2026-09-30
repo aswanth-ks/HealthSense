@@ -4,6 +4,7 @@ import {
   LayoutGrid, Activity, BarChart3, Clock, Brain, AlertCircle, Watch, Settings, HeartPulse, MoreHorizontal, LogOut,
 } from 'lucide-react';
 import { useAuth, initials } from '../../context/AuthContext.jsx';
+import useQuestions from '../../hooks/useQuestions.js';
 
 const NAV = [
   { to: '/', label: 'Overview', icon: LayoutGrid },
@@ -11,7 +12,7 @@ const NAV = [
   { to: '/trends', label: 'Health Trends', icon: BarChart3 },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/insights', label: 'AI Insights', icon: Brain },
-  { to: '/alerts', label: 'Alerts', icon: AlertCircle, badge: 0 },
+  { to: '/alerts', label: 'Alerts', icon: AlertCircle, badge: 'questions' },
   { to: '/watch', label: 'My Watch', icon: Watch },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -19,6 +20,8 @@ const NAV = [
 export default function Sidebar({ open, onClose }) {
   const { user, isDemo, logout } = useAuth();
   const [menu, setMenu] = useState(false);
+  const { questions } = useQuestions('open');
+  const pending = questions?.length || 0;
   return (
     <>
       {open && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={onClose} />}
@@ -50,8 +53,8 @@ export default function Sidebar({ open, onClose }) {
             >
               <Icon size={18} strokeWidth={1.6} />
               <span className="flex-1">{label}</span>
-              {badge !== undefined && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-line px-1.5 text-[11px] text-ink-soft">{badge}</span>
+              {badge && (
+                <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] ${pending ? 'bg-red-500 text-white' : 'bg-line text-ink-soft'}`}>{pending}</span>
               )}
             </NavLink>
           ))}

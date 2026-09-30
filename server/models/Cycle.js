@@ -14,6 +14,7 @@ const cycleSchema = new mongoose.Schema(
     sleep: { hours: Number, quality: Number, source: String, confidence: Number },
     symptoms: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SymptomLog' }],
     missing: [{ field: String, resolution: { type: String, enum: ['awaiting_sensor', 'estimated', 'asked', 'resolved', 'unresolved'] } }],
+    events: { spo2Dips: Number, respPauses: Number, nightSamples: Number },
     completeness: { type: Number, default: 0 }, // 0-1
     confidence: { type: Number, default: 0 }, // 0-1
     findings: [{ code: String, text: String, severity: Number }],

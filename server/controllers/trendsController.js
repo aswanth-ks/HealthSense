@@ -128,6 +128,7 @@ const cycleOut = (c) => ({
   activity: c.activity,
   sleep: c.sleep,
   missing: c.missing,
+  events: c.events,
   findings: c.findings,
   priority: c.priority,
   priorityReason: c.priorityReason,

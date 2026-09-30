@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getOverview, isDemo } from '../services/healthService.js';
 import { getSocket } from '../services/socket.js';
+import { useInput } from '../context/InputContext.jsx';
 
 // Loads the overview, then refreshes it (throttled) whenever new live readings arrive.
 export default function useOverview() {
   const [data, setData] = useState(null);
+  const { version } = useInput();
   useEffect(() => {
     let alive = true;
     let last = 0;
@@ -25,6 +27,6 @@ export default function useOverview() {
       clearTimeout(timer);
       socket?.off('readings', onReadings);
     };
-  }, []);
+  }, [version]);
   return data;
 }

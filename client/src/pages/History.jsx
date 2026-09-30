@@ -5,6 +5,7 @@ import Segmented from '../components/common/Segmented.jsx';
 import SourceBadge from '../components/common/SourceBadge.jsx';
 import CycleCard from '../components/history/CycleCard.jsx';
 import { getReadings, getCycles } from '../services/healthService.js';
+import { useInput } from '../context/InputContext.jsx';
 
 const FILTERS = { All: null, 'Heart Rate': 'hr', 'Blood Oxygen': 'spo2', Temperature: 'temp', 'Blood Pressure': 'bp_sys', Respiration: 'resp' };
 const PAGE = 10;
@@ -26,7 +27,8 @@ export default function History() {
   const [readings, setReadings] = useState({ total: 0, items: [] });
   const [cycles, setCycles] = useState(null);
 
-  useEffect(() => { getCycles(14).then(setCycles).catch(() => setCycles([])); }, []);
+  const { version } = useInput();
+  useEffect(() => { getCycles(14).then(setCycles).catch(() => setCycles([])); }, [version]);
   useEffect(() => {
     let alive = true;
     getReadings(FILTERS[filter], page, PAGE).then((d) => alive && setReadings(d)).catch(() => {});

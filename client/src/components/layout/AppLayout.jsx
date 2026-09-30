@@ -3,11 +3,13 @@ import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar.jsx';
 import Topbar from './Topbar.jsx';
+import { InputProvider } from '../../context/InputContext.jsx';
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
 
   return (
+    <InputProvider>
     <div className="min-h-screen lg:pl-64">
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex min-h-screen flex-col">
@@ -22,5 +24,6 @@ export default function AppLayout() {
         </main>
       </div>
     </div>
+    </InputProvider>
   );
 }

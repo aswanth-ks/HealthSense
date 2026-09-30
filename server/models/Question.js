@@ -9,6 +9,12 @@ const questionSchema = new mongoose.Schema(
     text: { type: String, required: true },
     kind: { type: String, enum: ['yesno', 'scale', 'choice', 'number'], default: 'yesno' },
     options: [String],
+    unit: String,
+    min: Number,
+    max: Number,
+    step: Number,
+    suggested: Number,
+    module: { type: String, default: 'general' }, // missing | sleepRisk | endoSymptoms
     reason: String, // why the system is asking
     status: { type: String, enum: ['open', 'answered', 'dismissed'], default: 'open' },
     answer: mongoose.Schema.Types.Mixed,
