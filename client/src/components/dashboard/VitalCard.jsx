@@ -34,7 +34,7 @@ export default function VitalCard({ vital }) {
             : <AlertCircle size={14} className={vital.status === 'No data' ? 'text-ink-mute' : 'text-amber-600'} />}
           {vital.status}
         </span>
-        <span className="z-10 text-ink-mute">{vital.delta}</span>
+        <span className={`z-10 ${vital.personal && vital.personal.band !== 'typical' ? 'font-medium text-amber-700' : 'text-ink-mute'}`}>{vital.delta}</span>
       </div>
       <div className="pointer-events-none absolute bottom-0 right-0 h-14 w-2/3 opacity-90">
         <Sparkline data={vital.series} color={color} />

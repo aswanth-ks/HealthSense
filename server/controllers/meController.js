@@ -1,5 +1,7 @@
 import Reading from '../models/Reading.js';
 import Cycle from '../models/Cycle.js';
+import Baseline from '../models/Baseline.js';
+import { interpret } from '../engines/baselineEngine.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { deviceStatus } from './deviceController.js';
 
@@ -65,13 +67,25 @@ export const getOverview = asyncHandler(async (req, res) => {
     const pct = ((cur - a) / a) * 100;
     return Math.abs(pct) < 1 ? 'Stable' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}% vs 24h avg`;
   };
+  // Personal context: how the latest value compares with *this user's* baseline
+  const baseDoc = await Baseline.findOne({ userId }).lean();
+  const baseMetrics = baseDoc?.metrics instanceof Map ? Object.fromEntries(baseDoc.metrics) : baseDoc?.metrics || {};
+  const SHORT = { typical: 'Typical for you', slightly_above: 'Slightly above your usual', above: 'Above your usual range', slightly_below: 'Slightly below your usual', below: 'Below your usual range' };
+  const personal = (m, v) => {
+    if (!baseDoc?.established || v == null || !baseMetrics[m]) return null;
+    const i = interpret(m, v, baseMetrics[m]);
+    return { band: i.band, text: SHORT[i.band] };
+  };
+
   const vital = (key, label, unit, m, value, check, series) => {
     const cur = latest[m];
     const ok = cur ? check(cur.value) : null;
+    const p = personal(m, cur?.value);
     return {
       key, label, unit, value: cur ? value : '--',
       status: cur == null ? 'No data' : ok ? 'Normal' : 'Out of range',
-      delta: delta(m),
+      delta: p?.text || delta(m),
+      personal: p,
       series: series.length > 1 ? series : [0, 0],
       source: cur?.source || null,
       confidence: cur?.confidence ?? null,
@@ -92,11 +106,23 @@ export const getOverview = asyncHandler(async (req, res) => {
   const newest = Object.values(latest).reduce((m, x) => (x.ts > m ? x.ts : m), null);
   const conf = vitals.filter((v) => v.confidence != null);
 
-  const cur = await Cycle.findOne({ userId }).sort({ start: -1 }).select('assessment').lean();
+  const cur = await Cycle.findOne({ userId }).sort({ start: -1 }).lean();
   const tri = cur?.assessment?.result;
+  const hoursElapsed = cur ? Math.min(24, (Date.now() - new Date(cur.start).getTime()) / 3600_000) : 0;
 
   res.json({
-    triage: tri ? { level: tri.level, confidence: tri.confidence, reason: tri.reasons[0] } : null,
+    triage: tri ? { level: tri.level, confidence: tri.confidence, reason: tri.reasons[0], reasons: tri.reasons.filter((x) => !x.startsWith('Data confidence')).slice(0, 3) } : null,
+    today: cur ? {
+      cycleIndex: cur.index,
+      hoursElapsed: +hoursElapsed.toFixed(1),
+      completeness: cur.completeness,
+      confidence: cur.confidence,
+      sleep: cur.sleep?.hours != null ? cur.sleep : null,
+      steps: cur.activity?.steps != null ? { value: cur.activity.steps, source: cur.activity.source, confidence: cur.activity.confidence } : null,
+      missing: (cur.missing || []).map((m) => m.field),
+    } : null,
+    baseline: { established: !!baseDoc?.established, daysUsed: baseDoc?.daysUsed || 0 },
+    focus: cur?.nextPriority ? { metrics: cur.nextPriority.metrics || [], reason: cur.nextPriority.reason, nightBoost: !!cur.nextPriority.nightBoost, sampleIntervalSec: cur.nextPriority.sampleIntervalSec } : null,
     user: { name: req.user.name },
     device: deviceStatus(req.user),
     status: {
