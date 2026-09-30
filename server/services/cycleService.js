@@ -8,6 +8,7 @@ import { cycleWindow, summarizeCycle, DAY_MS } from '../engines/cycleEngine.js';
 import { buildBaseline } from '../engines/baselineEngine.js';
 import { emitToUser } from '../utils/realtime.js';
 import { analyzeRecent } from './loopService.js';
+import { runTriage } from './triageService.js';
 
 const lastRun = new Map();
 const pending = new Map();
@@ -79,6 +80,7 @@ async function doUpdateCycles(userId, { full = false } = {}) {
 
   const baseline = await recomputeBaseline(userId);
   await analyzeRecent(userId);
+  await runTriage(userId);
   emitToUser(userId, 'cycles', { updatedAt: new Date() });
   return baseline;
 }

@@ -18,7 +18,7 @@
 //   --hr-base <bpm>      persona resting HR (default 74) — use different values for different users
 //   --device <id>        device id (default HS-SIM-001)
 
-import { sample, PROFILES, DEFAULT_PERSONA } from './generator.js';
+import { sample, isAsleep, PROFILES, DEFAULT_PERSONA } from './generator.js';
 
 const args = process.argv.slice(2);
 const flag = (name, def) => {
@@ -97,22 +97,45 @@ async function backfill(key) {
   console.log(`\r  backfill: ${sent} readings over ${backfillDays} day(s)${profile === 'apnea' ? `, ${apnea} simulated night events` : ''}`);
 }
 
+// Closed loop on the device side: poll the server's monitoring priority and adapt sampling.
+let config = { sampleIntervalSec: intervalSec, priority: [], nightBoost: false, reason: 'Standard monitoring' };
+async function pollConfig(key) {
+  try {
+    const res = await fetch(`${API}/device/config`, { headers: { 'x-device-key': key } });
+    if (!res.ok) return;
+    const next = await res.json();
+    if (next.reason !== config.reason) console.log(`
+  [config] ${next.priority.length ? `priority: ${next.priority.join(', ')} · every ${next.sampleIntervalSec}s${next.nightBoost ? ' at night' : ''}` : 'standard monitoring'} — ${next.reason}`);
+    config = next;
+  } catch { /* offline: keep the last config */ }
+}
+
+function currentInterval() {
+  // Priority sampling applies at night when nightBoost is set, otherwise all day
+  const boosted = config.priority.length && (!config.nightBoost || isAsleep(new Date()));
+  return boosted ? Math.min(intervalSec, config.sampleIntervalSec) : intervalSec;
+}
+
 async function stream(key) {
   console.log(`  live: every ${intervalSec}s (Ctrl+C to stop)`);
+  await pollConfig(key);
+  setInterval(() => pollConfig(key), 30_000);
   const dayIndex = backfillDays;
   const tick = async () => {
-    battery = Math.max(5, battery - 0.002 * intervalSec);
-    const s = sample(new Date(), persona, profile, { dayIndex, intervalSec });
+    const every = currentInterval();
+    battery = Math.max(5, battery - 0.002 * every);
+    const s = sample(new Date(), persona, profile, { dayIndex, intervalSec: every });
     const readings = s.readings.filter(keep);
     try {
       await post(key, readings);
-      process.stdout.write(`\r  live: HR ${s.readings[0].value}  SpO2 ${s.readings[1].value}  resp ${s.readings[2].value}${s.apneaEvent ? '  [night event]' : '              '}`);
+      process.stdout.write(`  live: HR ${s.readings[0].value}  SpO2 ${s.readings[1].value}  resp ${s.readings[2].value}  (${every}s)${s.apneaEvent ? '  [night event]' : '              '}`);
     } catch (e) {
-      console.error(`\n  ${e.message}`);
+      console.error(`
+  ${e.message}`);
     }
+    setTimeout(tick, every * 1000);
   };
   await tick();
-  setInterval(tick, intervalSec * 1000);
 }
 
 (async () => {

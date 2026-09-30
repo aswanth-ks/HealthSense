@@ -1,4 +1,5 @@
 export const mockOverview = {
+  triage: { level: 'MODERATE', confidence: 0.87, reason: '5 repeated nighttime respiratory abnormalities' },
   user: { name: 'Aswanth', initials: 'AS' },
   device: { name: 'HealthSense Watch', id: 'HS-WATCH-001', battery: 84, wifi: true, connected: true },
   status: { label: 'Stable', note: 'All readings in range', updatedAt: '10:27:08 AM' },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutGrid, Activity, BarChart3, Clock, Brain, AlertCircle, Watch, Settings, HeartPulse, MoreHorizontal, LogOut,
+  LayoutGrid, Activity, BarChart3, Clock, Brain, AlertCircle, Watch, Settings, HeartPulse, MoreHorizontal, LogOut, GitCommitVertical,
 } from 'lucide-react';
 import { useAuth, initials } from '../../context/AuthContext.jsx';
 import useQuestions from '../../hooks/useQuestions.js';
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/trends', label: 'Health Trends', icon: BarChart3 },
   { to: '/history', label: 'History', icon: Clock },
   { to: '/insights', label: 'AI Insights', icon: Brain },
+  { to: '/timeline', label: 'Timeline', icon: GitCommitVertical },
   { to: '/alerts', label: 'Alerts', icon: AlertCircle, badge: 'questions' },
   { to: '/watch', label: 'My Watch', icon: Watch },
   { to: '/settings', label: 'Settings', icon: Settings },

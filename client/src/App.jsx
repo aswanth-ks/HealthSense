@@ -11,6 +11,7 @@ import AIInsights from './pages/AIInsights.jsx';
 import Alerts from './pages/Alerts.jsx';
 import MyWatch from './pages/MyWatch.jsx';
 import Settings from './pages/Settings.jsx';
+import Timeline from './pages/Timeline.jsx';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/trends" element={<HealthTrends />} />
           <Route path="/history" element={<History />} />
           <Route path="/insights" element={<AIInsights />} />
+          <Route path="/timeline" element={<Timeline />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/watch" element={<MyWatch />} />
           <Route path="/settings" element={<Settings />} />

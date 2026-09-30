@@ -20,6 +20,10 @@ const cycleSchema = new mongoose.Schema(
     findings: [{ code: String, text: String, severity: Number }],
     priority: [String], // metrics to prioritise in the NEXT cycle (closed loop)
     priorityReason: String,
+    // Closed loop: what this cycle learned for the next one, and what it inherited from the previous one
+    nextPriority: { type: mongoose.Schema.Types.Mixed, default: null },
+    appliedPriority: { type: mongoose.Schema.Types.Mixed, default: null },
+    assessment: { type: mongoose.Schema.Types.Mixed, default: null }, // { result, modules }
     triage: { level: String, confidence: Number },
   },
   { timestamps: true }

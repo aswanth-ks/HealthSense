@@ -56,7 +56,7 @@ export default function Dashboard() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <MonitoringStatus status={data.status} source={data.device.name} />
+        <MonitoringStatus status={data.status} source={data.device.name} triage={data.triage} />
         <WearableCard device={data.device} />
       </div>
 

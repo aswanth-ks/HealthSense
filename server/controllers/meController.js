@@ -1,4 +1,5 @@
 import Reading from '../models/Reading.js';
+import Cycle from '../models/Cycle.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { deviceStatus } from './deviceController.js';
 
@@ -91,7 +92,11 @@ export const getOverview = asyncHandler(async (req, res) => {
   const newest = Object.values(latest).reduce((m, x) => (x.ts > m ? x.ts : m), null);
   const conf = vitals.filter((v) => v.confidence != null);
 
+  const cur = await Cycle.findOne({ userId }).sort({ start: -1 }).select('assessment').lean();
+  const tri = cur?.assessment?.result;
+
   res.json({
+    triage: tri ? { level: tri.level, confidence: tri.confidence, reason: tri.reasons[0] } : null,
     user: { name: req.user.name },
     device: deviceStatus(req.user),
     status: {

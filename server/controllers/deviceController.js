@@ -1,4 +1,5 @@
 import Reading, { METRICS } from '../models/Reading.js';
+import Cycle from '../models/Cycle.js';
 import { asyncHandler, httpError } from '../middleware/errorHandler.js';
 import { emitToUser } from '../utils/realtime.js';
 import { scheduleCycleUpdate } from '../services/cycleService.js';
@@ -67,9 +68,21 @@ export const ingest = asyncHandler(async (req, res) => {
   res.status(201).json({ accepted: docs.length, rejected: rejected.length });
 });
 
-/** GET /api/device/config — device polls this; Phase 5 fills `priority` from the closed-loop engine. */
+/**
+ * GET /api/device/config — the device polls this. It carries the closed-loop decision:
+ * what the latest cycle learned sets how the watch samples during the next cycle.
+ */
 export const getConfig = asyncHandler(async (req, res) => {
-  res.json({ sampleIntervalSec: 5, uploadIntervalSec: 5, priority: [], nightBoost: false, userId: req.user._id });
+  const latest = await Cycle.findOne({ userId: req.user._id }).sort({ start: -1 }).select('index nextPriority').lean();
+  const p = latest?.nextPriority;
+  res.json({
+    sampleIntervalSec: p?.sampleIntervalSec || 5,
+    uploadIntervalSec: 5,
+    priority: p?.metrics || [],
+    nightBoost: !!p?.nightBoost,
+    reason: p?.reason || 'Standard monitoring',
+    fromCycle: p?.fromCycle ?? null,
+  });
 });
 
 export function deviceStatus(user) {
