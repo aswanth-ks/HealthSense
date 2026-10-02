@@ -14,6 +14,8 @@ import { useInput } from '../context/InputContext.jsx';
 
 const DOT = { LOW: '🟢', MONITOR: '🟡', MODERATE: '🟠', HIGH: '🔴' };
 const METRIC_ICON = { sleep_duration: Moon, activity: Activity, resting_hr: HeartPulse, spo2: Droplets, respiration: Wind, temperature: Thermometer };
+const CAT_BORDER = { sleep: 'border-l-indigo-500', fatigue: 'border-l-amber-500', activity: 'border-l-sky-500', physiology: 'border-l-red-400', symptoms: 'border-l-rose-500', cycle: 'border-l-rose-400' };
+const CAT_CHIP = { sleep: 'bg-indigo-50 text-indigo-700', fatigue: 'bg-amber-50 text-amber-700', activity: 'bg-sky-50 text-sky-700', physiology: 'bg-red-50 text-red-600', symptoms: 'bg-rose-50 text-rose-600', cycle: 'bg-rose-50 text-rose-600' };
 const CAT_ICON = { sleep: Moon, fatigue: Activity, activity: Activity, physiology: HeartPulse, symptoms: Activity, cycle: CalendarHeart };
 const ITEM_DOT = { sleep: 'bg-indigo-400', night: 'bg-indigo-600', spo2: 'bg-brand-500', symptom: 'bg-blue-500', activity: 'bg-amber-500', pattern: 'bg-red-400', question: 'bg-violet-500', answer: 'bg-blue-600', triage: 'bg-red-500', priority: 'bg-indigo-500' };
 const SAFETY = 'HealthSense provides personalized health-pattern analysis and triage support. It does not diagnose medical conditions or replace professional medical evaluation.';
@@ -43,18 +45,54 @@ const STATUS = {
   no_data: { text: 'No data', cls: 'bg-canvas text-ink-mute' },
 };
 
-function Section({ id, icon: Icon, eyebrow, title, children, className = '' }) {
+// Each part of the story has its own number + colour so sections are easy to tell apart.
+const TONES = {
+  indigo: { panel: 'border-indigo-100 bg-indigo-50/50', badge: 'bg-indigo-600', icon: 'bg-indigo-100 text-indigo-700', eyebrow: 'text-indigo-700', bar: 'bg-indigo-500' },
+  teal: { panel: 'border-brand-100 bg-brand-50/50', badge: 'bg-brand-600', icon: 'bg-brand-100 text-brand-700', eyebrow: 'text-brand-700', bar: 'bg-brand-500' },
+  amber: { panel: 'border-amber-100 bg-amber-50/50', badge: 'bg-amber-500', icon: 'bg-amber-100 text-amber-700', eyebrow: 'text-amber-700', bar: 'bg-amber-500' },
+  violet: { panel: 'border-violet-100 bg-violet-50/50', badge: 'bg-violet-600', icon: 'bg-violet-100 text-violet-700', eyebrow: 'text-violet-700', bar: 'bg-violet-500' },
+  rose: { panel: 'border-rose-100 bg-rose-50/50', badge: 'bg-rose-500', icon: 'bg-rose-100 text-rose-600', eyebrow: 'text-rose-600', bar: 'bg-rose-500' },
+  sky: { panel: 'border-sky-100 bg-sky-50/50', badge: 'bg-sky-600', icon: 'bg-sky-100 text-sky-700', eyebrow: 'text-sky-700', bar: 'bg-sky-500' },
+  slate: { panel: 'border-line bg-white/60', badge: 'bg-ink-soft', icon: 'bg-canvas text-ink-soft', eyebrow: 'text-ink-soft', bar: 'bg-ink-mute' },
+};
+
+function Section({ id, n, tone = 'slate', icon: Icon, eyebrow, title, subtitle, children, className = '' }) {
+  const t = TONES[tone];
   return (
-    <section id={id} className={`scroll-mt-24 ${className}`}>
-      <div className="mb-4 flex items-center gap-2.5">
-        {Icon && <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-brand-700 shadow-card"><Icon size={16} /></span>}
-        <div>
-          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-          <h2 className="text-xl font-medium">{title}</h2>
+    <section id={id} className={`scroll-mt-28 rounded-3xl border p-4 sm:p-6 ${t.panel} ${className}`}>
+      <div className="mb-5 flex items-start gap-3">
+        {n != null && <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold text-white shadow-sm ${t.badge}`}>{n}</span>}
+        <div className="min-w-0 flex-1">
+          {eyebrow && <p className={`text-[11px] font-semibold uppercase tracking-wider ${t.eyebrow}`}>{eyebrow}</p>}
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-sm text-ink-soft">{subtitle}</p>}
         </div>
+        {Icon && <span className={`hidden h-10 w-10 shrink-0 place-items-center rounded-xl sm:grid ${t.icon}`}><Icon size={19} /></span>}
       </div>
       {children}
     </section>
+  );
+}
+
+const STEPS = [
+  ['happened', 'What happened'], ['changed', 'What changed'], ['patterns', 'Patterns'], ['matters', 'Why it matters'],
+  ['todo', 'What to do'], ['evaluation', 'Evaluation'], ['next', 'Next 24h'], ['questions', 'Questions'], ['quality', 'Data quality'],
+];
+
+function StepNav({ hasCycle }) {
+  const steps = hasCycle ? [...STEPS.slice(0, 4), ['cycle', 'Cycle'], ...STEPS.slice(4)] : STEPS;
+  return (
+    <nav aria-label="Assessment sections" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <ol className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
+        {steps.map(([id, label], i) => (
+          <li key={id}>
+            <a href={`#${id}`} className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-xs text-ink-soft shadow-card hover:border-brand-300 hover:text-brand-800">
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-canvas text-[10px] font-semibold text-ink">{i + 1}</span>{label}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
   );
 }
 
@@ -110,6 +148,8 @@ export default function ThreeDayAssessment() {
         </div>
       </header>
 
+      {a.sufficient && <StepNav hasCycle={a.cycle_context?.enabled} />}
+
       {!a.sufficient ? (
         <section className="card p-6 text-center">
           <Database className="mx-auto text-amber-600" size={28} />
@@ -146,14 +186,17 @@ export default function ThreeDayAssessment() {
           </section>
 
           {/* What happened */}
-          <Section icon={CircleDot} eyebrow="Story" title="What happened over the last 3 days?">
+          <Section id="happened" n={1} tone="indigo" icon={CircleDot} eyebrow="The story" title="What happened over the last 3 days?" subtitle="Events recorded day by day — nothing is added that wasn't measured or reported.">
             <ol className="grid gap-4 md:grid-cols-3">
               {a.day_events.map((d) => (
-                <li key={d.day} className="card p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-ink-mute">Day {d.day}</p>
-                  <p className="font-medium">{d.label}</p>
+                <li key={d.day} className="card overflow-hidden">
+                  <div className="flex items-center justify-between bg-indigo-600 px-4 py-2.5 text-white">
+                    <p className="text-sm font-semibold">Day {d.day} <span className="font-normal text-indigo-100">· {d.label}</span></p>
+                    <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px]">{d.items.length} event{d.items.length === 1 ? '' : 's'}</span>
+                  </div>
+                  <div className="p-4">
                   {d.items.length ? (
-                    <ul className="mt-3 space-y-0">
+                    <ul className="space-y-0">
                       {d.items.map((it, i) => (
                         <li key={i} className="relative pb-3 pl-5 last:pb-0">
                           {i < d.items.length - 1 && <span className="absolute left-[5px] top-3 h-full w-px bg-line" />}
@@ -163,14 +206,15 @@ export default function ThreeDayAssessment() {
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="mt-3 text-sm text-ink-mute">No data available</p>}
+                  ) : <p className="text-sm text-ink-mute">No data available</p>}
+                  </div>
                 </li>
               ))}
             </ol>
           </Section>
 
           {/* What changed */}
-          <Section icon={Repeat} eyebrow="Your normal vs now" title="What changed from my baseline?">
+          <Section id="changed" n={2} tone="teal" icon={Repeat} eyebrow="Your normal vs now" title="What changed from my baseline?" subtitle="Compared with your own learned normal, not a generic threshold.">
             {a.baseline_status === 'developing' && (
               <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-900"><b>Baseline still developing.</b> HealthSense needs a few complete days to learn your normal, so these comparisons are less reliable.</p>
             )}
@@ -179,16 +223,16 @@ export default function ThreeDayAssessment() {
                 const Icon = METRIC_ICON[r.metric] || Activity;
                 const st = STATUS[r.status] || STATUS.typical;
                 return (
-                  <div key={r.metric} className={`card p-4 ${r.status === 'changed' ? '!border-amber-200' : ''}`}>
+                  <div key={r.metric} className={`card border-t-4 p-4 ${r.status === 'changed' ? '!border-t-amber-500' : r.status === 'slight_change' ? '!border-t-amber-300' : r.status === 'typical' ? '!border-t-brand-500' : '!border-t-line'}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="flex items-center gap-2 text-sm text-ink-soft"><Icon size={15} /> {r.label}</p>
+                      <p className="flex items-center gap-2 text-sm font-medium"><span className="grid h-7 w-7 place-items-center rounded-lg bg-canvas text-ink-soft"><Icon size={14} /></span> {r.label}</p>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.text}</span>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div><p className="text-[10px] text-ink-mute">Your baseline</p><p className="text-sm font-medium">{r.baseline != null ? val(r.baseline, r.unit) : '—'}</p></div>
                       <div><p className="text-[10px] text-ink-mute">Last 3 days</p><p className="text-sm font-medium">{val(r.recent, r.unit)}</p></div>
                     </div>
-                    <p className={`mt-2 text-sm ${r.status === 'changed' ? 'font-medium text-amber-800' : 'text-ink-soft'}`}>{r.status === 'no_data' ? 'No data available' : r.status === 'baseline_developing' ? 'Comparison not yet reliable' : change(r)}</p>
+                    <p className={`mt-3 inline-flex rounded-lg px-2.5 py-1 text-sm font-medium ${r.status === 'changed' || r.status === 'slight_change' ? 'bg-amber-50 text-amber-800' : r.status === 'typical' ? 'bg-brand-50 text-brand-800' : 'bg-canvas text-ink-soft'}`}>{r.status === 'no_data' ? 'No data available' : r.status === 'baseline_developing' ? 'Comparison not yet reliable' : change(r)}</p>
                   </div>
                 );
               })}
@@ -197,21 +241,25 @@ export default function ThreeDayAssessment() {
           </Section>
 
           {/* Patterns */}
-          <Section icon={Repeat} eyebrow="Repeated signals" title="Patterns detected">
+          <Section id="patterns" n={3} tone="amber" icon={Repeat} eyebrow="Repeated signals" title="Patterns detected" subtitle="Changes that repeated or appeared together.">
             {a.patterns.length ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {a.patterns.map((p) => {
                   const Icon = CAT_ICON[p.category] || Activity;
                   return (
-                    <div key={p.pattern_id} className="card flex flex-col p-5">
-                      <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-ink-mute"><Icon size={13} /> {p.category} pattern</p>
-                      <p className="mt-1.5 font-medium">{p.name}</p>
+                    <div key={p.pattern_id} className={`card flex flex-col border-l-4 p-5 ${CAT_BORDER[p.category] || 'border-l-amber-400'}`}>
+                      <p className="flex items-center justify-between gap-2">
+                        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider ${CAT_CHIP[p.category] || 'bg-amber-50 text-amber-700'}`}><Icon size={12} /> {p.category}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${p.status === 'repeated' ? 'bg-red-50 text-red-600' : 'bg-canvas text-ink-soft'}`}>{p.status === 'repeated' ? 'Repeated' : 'Observed once'}</span>
+                      </p>
+                      <p className="mt-3 text-base font-semibold leading-snug">{p.name}</p>
                       <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <div><dt className="text-[10px] text-ink-mute">{p.change_percent != null ? 'Change' : 'Observed'}</dt><dd className="font-medium">{p.change_percent != null ? `${p.change_percent}%` : p.recurrence.cycles_observed ? `${p.recurrence.cycles_observed} cycles` : `${p.recurrence.days_observed} of ${p.recurrence.total_days} days`}</dd></div>
                         <div><dt className="text-[10px] text-ink-mute">Confidence</dt><dd className="font-medium">{pct(p.confidence)}</dd></div>
                       </dl>
+                      <div className="mt-2 h-1.5 rounded-full bg-line"><div className="h-full rounded-full bg-amber-500" style={{ width: pct(p.confidence) }} /></div>
                       {n?.pattern_descriptions?.[p.pattern_id] && <p className="mt-2 text-xs text-ink-soft">{n.pattern_descriptions[p.pattern_id]}</p>}
-                      <button onClick={() => setEvidence({ pattern: p })} className="mt-4 inline-flex items-center gap-1 self-start rounded-lg py-1 text-sm font-medium text-brand-700 hover:underline">View evidence <ArrowRight size={14} /></button>
+                      <button onClick={() => setEvidence({ pattern: p })} className="mt-4 inline-flex min-h-[40px] items-center gap-1.5 self-start rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100">View evidence <ArrowRight size={14} /></button>
                     </div>
                   );
                 })}
@@ -220,14 +268,16 @@ export default function ThreeDayAssessment() {
           </Section>
 
           {/* Why it matters */}
-          <Section icon={Lightbulb} eyebrow="Meaning" title="Why this matters">
+          <Section id="matters" n={4} tone="violet" icon={Lightbulb} eyebrow="Meaning" title="Why this matters">
             <p className="card mb-3 p-5 text-sm leading-relaxed text-ink">{n?.why_it_matters || 'Repeated changes are more informative than a single reading, but the available data cannot determine the underlying medical cause.'}</p>
             <div className="grid gap-3 md:grid-cols-3">
-              {[['Observed', 'What was measured or recorded', a.observed, Eye, 'text-brand-700'], ['Interpreted', 'Patterns HealthSense detected', a.interpreted, Lightbulb, 'text-amber-700'], ['Unknown', 'What cannot be determined', a.unknown, HelpCircle, 'text-ink-soft']].map(([t, sub, items, Icon, cls]) => (
-                <div key={t} className="card p-4">
-                  <p className={`flex items-center gap-2 font-medium ${cls}`}><Icon size={15} /> {t}</p>
+              {[['Observed', 'What was measured or recorded', a.observed, Eye, 'text-brand-800', 'bg-brand-100'], ['Interpreted', 'Patterns HealthSense detected', a.interpreted, Lightbulb, 'text-amber-800', 'bg-amber-100'], ['Unknown', 'What cannot be determined', a.unknown, HelpCircle, 'text-slate-700', 'bg-slate-200']].map(([t, sub, items, Icon, cls, head]) => (
+                <div key={t} className="card overflow-hidden">
+                  <p className={`flex items-center gap-2 px-4 py-2.5 font-semibold ${cls} ${head}`}><Icon size={15} /> {t}</p>
+                  <div className="p-4 pt-2">
                   <p className="text-[11px] text-ink-mute">{sub}</p>
                   <ul className="mt-2 space-y-1.5 text-xs text-ink-soft">{(items.length ? items : ['Nothing to list']).map((x) => <li key={x}>• {x}</li>)}</ul>
+                  </div>
                 </div>
               ))}
             </div>
@@ -235,7 +285,7 @@ export default function ThreeDayAssessment() {
 
           {/* Contributing factors */}
           {a.contributing_factors.length > 0 && (
-            <Section icon={Info} eyebrow="Context" title="Possible contributing factors">
+            <Section tone="slate" icon={Info} eyebrow="Context" title="Possible contributing factors">
               <div className="card p-5">
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {a.contributing_factors.map((f) => (
@@ -249,7 +299,7 @@ export default function ThreeDayAssessment() {
 
           {/* Cycle context (only when tracking is enabled) */}
           {a.cycle_context?.enabled && (
-            <Section icon={CalendarHeart} eyebrow="Menstrual cycle" title="Cycle context">
+            <Section id="cycle" tone="rose" icon={CalendarHeart} eyebrow="Menstrual cycle" title="Cycle context">
               <div className="card p-5">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Current cycle</p><p className="text-sm font-medium">{a.cycle_context.cycle_day ? `Day ${a.cycle_context.cycle_day}` : 'Uncertain'}</p></div>
@@ -276,9 +326,9 @@ export default function ThreeDayAssessment() {
           )}
 
           {/* What should I do now */}
-          <section className="card overflow-hidden border-brand-200">
-            <div className="bg-brand-50/60 p-5 sm:p-7">
-              <p className="eyebrow">Next step</p>
+          <section id="todo" className="scroll-mt-28 overflow-hidden rounded-3xl border-2 border-brand-300 bg-white shadow-lg shadow-brand-900/5">
+            <div className="bg-gradient-to-br from-brand-50 to-white p-5 sm:p-7">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand-700"><span className="grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-[11px] text-white">5</span> Next step</p>
               <h2 className="mt-1 text-2xl font-medium">What should I do now?</h2>
               <p className="mt-4 text-[11px] font-medium uppercase tracking-wider text-ink-mute">Recommended next step</p>
               <p className="mt-1 text-lg font-medium">{a.recommended_actions[0].text}</p>
@@ -292,7 +342,7 @@ export default function ThreeDayAssessment() {
           </section>
 
           {/* Professional evaluation */}
-          <Section icon={Stethoscope} eyebrow="Guidance" title="Professional evaluation">
+          <Section id="evaluation" n={6} tone="slate" icon={Stethoscope} eyebrow="Guidance" title="Professional evaluation">
             <div className={`card p-5 ${s.bg}`} style={{ borderColor: `${s.ring}55` }}>
               <p className={`text-lg font-semibold ${s.text}`}>{DOT[pe.level]} {pe.level}</p>
               <p className="mt-1 font-medium">{pe.headline}</p>
@@ -312,7 +362,7 @@ export default function ThreeDayAssessment() {
           </Section>
 
           {/* Next 24-hour monitoring focus — the closed loop */}
-          <Section icon={Target} eyebrow="Closed loop" title="Next 24-hour monitoring focus">
+          <Section id="next" n={7} tone="indigo" icon={Target} eyebrow="Closed loop" title="Next 24-hour monitoring focus" subtitle="What HealthSense will look for next — decided by this assessment.">
             <div className="card p-5">
               <div className="mb-5 flex flex-col items-stretch gap-2 text-center text-xs sm:flex-row sm:items-center">
                 {['Past 3 days of data', '3-day assessment', 'Next monitoring strategy'].map((x, i, all) => (
@@ -342,7 +392,7 @@ export default function ThreeDayAssessment() {
           </Section>
 
           {/* Adaptive questions */}
-          <Section id="questions" icon={HelpCircle} eyebrow="Your input" title="Questions HealthSense needs you to answer">
+          <Section id="questions" n={8} tone="sky" icon={HelpCircle} eyebrow="Your input" title="Questions HealthSense needs you to answer">
             {openQs.length ? (
               <div className="space-y-3">
                 {openQs.map((q) => <QuestionCard key={q.id} question={q} allowUnsure onDone={() => reload()} />)}
@@ -354,7 +404,7 @@ export default function ThreeDayAssessment() {
       )}
 
       {/* Data quality */}
-      <Section icon={Database} eyebrow="Transparency" title="Data quality & confidence">
+      <Section id="quality" n={9} tone="slate" icon={Database} eyebrow="Transparency" title="Data quality & confidence">
         <div className="card p-5">
           <div className="space-y-3">
             {[['measured', 'Measured', 'MEASURED', 'bg-brand-500'], ['user_reported', 'User reported', 'USER_REPORTED', 'bg-blue-500'], ['historical', 'Historical', 'HISTORICAL', 'bg-violet-500'], ['estimated', 'AI estimated', 'AI_ESTIMATED', 'bg-amber-500']].map(([k, l, p, bar]) => (
