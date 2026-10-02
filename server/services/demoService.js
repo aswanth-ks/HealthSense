@@ -15,6 +15,7 @@ import { updateCycles } from './cycleService.js';
 import MenstrualCycle from '../models/MenstrualCycle.js';
 import MenstrualSymptom from '../models/MenstrualSymptom.js';
 import CycleBaseline from '../models/CycleBaseline.js';
+import Assessment from '../models/Assessment.js';
 import { startPeriod } from './menstrualService.js';
 
 const STEP = 5 * 60_000; // 5-minute resolution
@@ -55,7 +56,7 @@ const nightOf = (dayStart) => [dayStart.getTime(), dayStart.getTime() + 7 * 3600
 export const SCENARIOS = {
   /** Start over: remove this user's monitoring data. */
   async reset(userId) {
-    await Promise.all([Reading, Cycle, Baseline, Question, TriageEvent, TimelineEvent, SymptomLog, MenstrualCycle, MenstrualSymptom, CycleBaseline].map((M) => M.deleteMany({ userId })));
+    await Promise.all([Reading, Cycle, Baseline, Question, TriageEvent, TimelineEvent, SymptomLog, MenstrualCycle, MenstrualSymptom, CycleBaseline, Assessment].map((M) => M.deleteMany({ userId })));
     await User.updateOne({ _id: userId }, { $set: { device: { packets: 0 }, deviceId: '', 'cycle.tracking': false }, $unset: { 'cycle.lastPeriodStart': '', 'cycle.setupAt': '' } });
     return 'All monitoring data for this account was cleared.';
   },
@@ -155,6 +156,39 @@ export const SCENARIOS = {
     await markDevice(userId, true);
     await updateCycles(userId, { full: true });
     return 'Three menstrual cycles generated (with sensor data). Each showed strong pain, fatigue and reduced activity on cycle days 1–3 — the system learns this personal pattern and adapts questions and monitoring.';
+  },
+
+  /**
+   * 3-Day Sleep Pattern: 4 normal days (baseline) then
+   *   day 1 reduced sleep + fatigue · day 2 breathing irregularity + SpO₂ dips · day 3 repeated + fatigue.
+   */
+  async threeDay(userId) {
+    await SCENARIOS.reset(userId);
+    const today = cycleWindow(new Date()).start.getTime();
+    const d1 = today - 2 * DAY_MS;
+    // baseline days + the 3-day window, normal physiology
+    await insert(generate(userId, today - 6 * DAY_MS, Date.now(), 'normal'));
+    // day 2 and day 3 nights: apnea-like events (00:00–07:00)
+    for (const day of [d1 + DAY_MS, today]) {
+      const [from, to] = nightOf(new Date(day));
+      const endN = Math.min(to, Date.now());
+      if (endN <= from) continue;
+      await Reading.deleteMany({ userId, source: 'measured', metric: { $in: NIGHT_METRICS }, ts: { $gte: new Date(from), $lt: new Date(endN) } });
+      await insert(generate(userId, from, endN, 'apnea', { abnormal: true, only: NIGHT_METRICS }));
+    }
+    // day 1: reduced sleep (reported) + fatigue; day 3: fatigue again
+    await Reading.create({ userId, metric: 'sleep', value: 5.9, ts: new Date(d1 + 7 * 3600_000), source: 'reported', confidence: 1 });
+    await SymptomLog.insertMany([
+      { userId, type: 'fatigue', severity: 5, ts: new Date(d1 + 15 * 3600_000), source: 'reported' },
+      { userId, type: 'fatigue', severity: 6, ts: new Date(Math.min(today + 10 * 3600_000, Date.now() - 60_000)), source: 'reported' },
+    ]);
+    await TimelineEvent.insertMany([
+      { userId, ts: new Date(today - 6 * DAY_MS), kind: 'device', title: 'Monitoring started', detail: 'HealthSense Watch (demo) connected.' },
+      { userId, ts: new Date(d1 + 15 * 3600_000), kind: 'symptom', title: 'Fatigue reported', detail: 'Severity 5/10 after a short night (5h 54m).' },
+    ]);
+    await markDevice(userId, true);
+    await updateCycles(userId, { full: true });
+    return '3-day sleep pattern generated: reduced sleep and fatigue on day 1, nighttime breathing irregularity with SpO₂ dips on days 2 and 3, fatigue again on day 3. Open the 3-Day Assessment.';
   },
 
   /** Watch not worn last night: SpO2, breathing and movement missing; no reported sleep. */

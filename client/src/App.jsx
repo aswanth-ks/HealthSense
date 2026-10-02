@@ -15,6 +15,7 @@ import Timeline from './pages/Timeline.jsx';
 import Profile from './pages/Profile.jsx';
 import Demo from './pages/Demo.jsx';
 import CycleHealth from './pages/CycleHealth.jsx';
+import ThreeDayAssessment from './pages/ThreeDayAssessment.jsx';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/trends" element={<HealthTrends />} />
           <Route path="/history" element={<History />} />
           <Route path="/insights" element={<AIInsights />} />
+          <Route path="/insights/3-day-assessment" element={<ThreeDayAssessment />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/watch" element={<MyWatch />} />

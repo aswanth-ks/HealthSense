@@ -10,7 +10,7 @@ const MODULE = {
 };
 
 // One adaptive question from the closed-loop engine (spec §28 step 5).
-export default function QuestionCard({ question: q, onDone, compact = false }) {
+export default function QuestionCard({ question: q, onDone, compact = false, allowUnsure = false }) {
   const [value, setValue] = useState(q.kind === 'number' ? (q.suggested ?? '') : q.kind === 'scale' ? 5 : null);
   const [state, setState] = useState('idle');
   const [why, setWhy] = useState(!compact);
@@ -69,6 +69,7 @@ export default function QuestionCard({ question: q, onDone, compact = false }) {
           <div className="flex gap-2">
             <button disabled={busy} onClick={() => submit(true)} className="rounded-xl bg-brand-600 px-5 py-2 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-60">Yes</button>
             <button disabled={busy} onClick={() => submit(false)} className="rounded-xl border border-line bg-white px-5 py-2 text-xs font-medium hover:bg-canvas disabled:opacity-60">No</button>
+            {allowUnsure && <button disabled={busy} onClick={() => submit('not_sure')} className="rounded-xl border border-line bg-white px-4 py-2 text-xs text-ink-soft hover:bg-canvas disabled:opacity-60">Not sure</button>}
           </div>
         )}
         {q.kind === 'choice' && (

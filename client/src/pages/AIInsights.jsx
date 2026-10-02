@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Info, Droplet, Moon, Coffee, Watch, Sparkles, Database, ShieldCheck, TrendingUp, TrendingDown, Stethoscope, ClipboardCheck,
+  Info, Droplet, Moon, Coffee, Watch, Sparkles, Database, ShieldCheck, TrendingUp, TrendingDown, Stethoscope, ClipboardCheck, CalendarRange, ArrowRight,
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
 import Card from '../components/common/Card.jsx';
@@ -117,6 +118,17 @@ export default function AIInsights() {
           )}
         </div>
       </section>
+
+      {/* 3-Day Assessment */}
+      <Link to="/insights/3-day-assessment" className="card group flex flex-col gap-4 border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:p-6">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-600 text-white"><CalendarRange size={22} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="eyebrow block">Detailed assessment</span>
+          <span className="mt-1 block text-lg font-medium">Your last 3 days, as one health story</span>
+          <span className="mt-1 block text-sm text-ink-soft">What happened, what changed from your baseline, which patterns repeated, what to do next — and what HealthSense will monitor in the next 24 hours.</span>
+        </span>
+        <span className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white group-hover:bg-brand-700">View 3-Day Assessment <ArrowRight size={16} /></span>
+      </Link>
 
       {/* 2. Closed loop */}
       <ClosedLoopCard loop={tri?.loop} />

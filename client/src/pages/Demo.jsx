@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarHeart, FlaskConical, Play, RotateCcw, Moon, Activity, DatabaseZap, CheckCircle2, Loader2, ArrowRight, ShieldCheck, MessageCircleQuestion, Target, GraduationCap,
+  CalendarHeart, CalendarRange, FlaskConical, Play, RotateCcw, Moon, Activity, DatabaseZap, CheckCircle2, Loader2, ArrowRight, ShieldCheck, MessageCircleQuestion, Target, GraduationCap,
 } from 'lucide-react';
 import api from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -12,6 +12,7 @@ const STEPS = [
   { id: 'normal', icon: Play, title: 'Normal 24-hour monitoring', text: 'Generates 4 days of normal sensor data. The system learns your personal baseline.', see: ['/trends', 'Health Trends'] },
   { id: 'sleep', icon: Moon, title: 'Sleep-related abnormal pattern', text: 'Adds breathing pauses with SpO₂ dips to the last 3 nights. Deviation from baseline → adaptive question.', see: ['/alerts', 'Answer the question'] },
   { id: 'symptoms', icon: Activity, title: 'Recurring symptom pattern', text: 'Reports strong cramps/pain and fatigue on 3 days around menstruation (endometriosis-associated module).', see: ['/insights', 'Risk explanation'] },
+  { id: 'threeDay', icon: CalendarRange, title: '3-Day Sleep Pattern', text: 'Resets the account, learns a baseline, then: day 1 reduced sleep + fatigue · day 2 breathing irregularity + SpO₂ dips · day 3 repeated + fatigue. Open the 3-Day Assessment, answer the question, watch it update.', see: ['/insights/3-day-assessment', '3-Day Assessment'] },
   { id: 'menstrual', icon: CalendarHeart, title: 'Menstrual cycle pattern', text: 'Enables cycle tracking and generates 3 cycles where days 1–3 bring strong pain, fatigue and reduced activity. Recurring pattern → adaptive question → answer → risk/context update → next-cycle priorities. (Resets the account first.)', see: ['/cycle', 'Cycle & Health'] },
   { id: 'missing', icon: DatabaseZap, title: 'Missing data', text: 'Removes last night\'s SpO₂, breathing and movement (watch not worn). Sensor → estimate → ask you.', see: ['/history', 'See the cycle'] },
 ];
@@ -47,7 +48,7 @@ export default function Demo() {
     try {
       const { data } = await api.post(`/demo/${id}`, null, { timeout: 180_000 });
       setStatus(data.status);
-      setDone((d) => ({ ...d, [id]: true, ...(id === 'reset' || id === 'menstrual' ? { normal: false, sleep: false, symptoms: false, missing: false } : {}) }));
+      setDone((d) => ({ ...d, [id]: true, ...(id === 'reset' || id === 'menstrual' || id === 'threeDay' ? { normal: false, sleep: false, symptoms: false, missing: false } : {}) }));
       const after = data.status.triage?.level;
       setLog((l) => [{ id, message: data.message, change: before && after && before !== after ? `${before} → ${after}` : null, at: new Date() }, ...l]);
       // Scenarios can change account settings (e.g. cycle tracking): refresh the profile

@@ -7,6 +7,7 @@ import userRoutes from './routes/userRoutes.js';
 import deviceRoutes from './routes/deviceRoutes.js';
 import meRoutes from './routes/meRoutes.js';
 import demoRoutes from './routes/demoRoutes.js';
+import assessmentRoutes from './routes/assessmentRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 // The Express app, shared by the local server (server.js) and Vercel (default export).
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/demo', demoRoutes);
+app.use('/api/assessments', assessmentRoutes);
 app.use('/api', deviceRoutes); // /api/ingest, /api/device/config
 
 app.use(notFound);
