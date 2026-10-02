@@ -57,7 +57,9 @@ export default function CycleSetupModal({ open, onClose, onDone, initial }) {
       duration: initial?.typicalPeriodLength ? String(initial.typicalPeriodLength) : '',
       regularity: initial?.regularity || null,
     });
-  }, [open, initial]);
+    // Reset only when the dialog opens — not when the parent re-renders with a new settings object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v?.target ? v.target.value : v }));
   const steps = ['recent', 'end', 'previous', 'length', 'duration', 'regularity', 'symptoms'];
