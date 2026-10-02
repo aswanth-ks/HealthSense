@@ -19,7 +19,7 @@ function Row({ icon: Icon, label, children, action }) {
 }
 
 // Today's 24-hour monitoring cycle at a glance: progress, completeness, baseline, sleep and activity.
-export default function TodayCard({ today, baseline }) {
+export default function TodayCard({ today, baseline, lastCycle }) {
   const { openCheckin } = useInput();
   const progress = today ? Math.round((today.hoursElapsed / 24) * 100) : 0;
 
@@ -58,7 +58,14 @@ export default function TodayCard({ today, baseline }) {
           </div>
         </>
       ) : (
-        <p className="text-sm text-ink-soft">Your first 24-hour cycle starts when the watch sends data.</p>
+        <div className="space-y-3 text-sm text-ink-soft">
+          <p>{lastCycle
+            ? <>No data received today yet. Your last monitoring cycle was <b className="text-ink">{new Date(lastCycle.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</b>.</>
+            : 'Your first 24-hour cycle starts when the watch sends data.'}</p>
+          <p className="text-xs text-ink-mute">Wear your watch (or start the simulator) and today's cycle will begin automatically.</p>
+          <button onClick={() => openCheckin()} className="text-xs font-medium text-brand-700 hover:underline">Add today's check-in →</button>
+          <p className="border-t border-line pt-3 text-xs">Personal baseline: {baseline?.established ? <span className="text-brand-700">established · {baseline.daysUsed} days</span> : <span className="text-amber-700">learning · {baseline?.daysUsed || 0}/3 days</span>}</p>
+        </div>
       )}
     </Card>
   );

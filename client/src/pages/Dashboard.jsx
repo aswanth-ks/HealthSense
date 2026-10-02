@@ -51,7 +51,7 @@ export default function Dashboard() {
       {/* 1. How am I doing? */}
       <div className="grid gap-5 lg:grid-cols-3">
         <MonitoringStatus status={data.status} triage={triage} changed={tri?.current?.changed} />
-        <TodayCard today={data.today} baseline={data.baseline} />
+        <TodayCard today={data.today} baseline={data.baseline} lastCycle={data.lastCycle} />
       </div>
 
       {/* 2. What do you need from me? */}

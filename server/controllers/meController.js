@@ -63,7 +63,7 @@ export const getOverview = asyncHandler(async (req, res) => {
   const delta = (m) => {
     const cur = latest[m]?.value;
     const a = avg[m]?.avg;
-    if (cur == null || !a) return '—';
+    if (cur == null || !a) return 'No recent data to compare';
     const pct = ((cur - a) / a) * 100;
     return Math.abs(pct) < 1 ? 'Stable' : `${pct > 0 ? '+' : ''}${pct.toFixed(0)}% vs 24h avg`;
   };
@@ -86,7 +86,7 @@ export const getOverview = asyncHandler(async (req, res) => {
       status: cur == null ? 'No data' : ok ? 'Normal' : 'Out of range',
       delta: p?.text || delta(m),
       personal: p,
-      series: series.length > 1 ? series : [0, 0],
+      series: series.length > 1 ? series : [],
       source: cur?.source || null,
       confidence: cur?.confidence ?? null,
       ts: cur?.ts || null,
@@ -109,10 +109,12 @@ export const getOverview = asyncHandler(async (req, res) => {
   const cur = await Cycle.findOne({ userId }).sort({ start: -1 }).lean();
   const tri = cur?.assessment?.result;
   const hoursElapsed = cur ? Math.min(24, (Date.now() - new Date(cur.start).getTime()) / 3600_000) : 0;
+  const isToday = cur && Date.now() - new Date(cur.start).getTime() < 24 * 3600_000;
 
   res.json({
     triage: tri ? { level: tri.level, confidence: tri.confidence, reason: tri.reasons[0], reasons: tri.reasons.filter((x) => !x.startsWith('Data confidence')).slice(0, 3) } : null,
-    today: cur ? {
+    lastCycle: cur && !isToday ? { index: cur.index, start: cur.start } : null,
+    today: isToday ? {
       cycleIndex: cur.index,
       hoursElapsed: +hoursElapsed.toFixed(1),
       completeness: cur.completeness,
@@ -128,7 +130,7 @@ export const getOverview = asyncHandler(async (req, res) => {
     status: {
       label: available === 0 ? 'No data' : outOfRange ? 'Attention' : 'Stable',
       note: available === 0 ? 'Waiting for readings' : outOfRange ? `${outOfRange} reading(s) out of range` : 'All readings in range',
-      updatedAt: newest ? new Date(newest).toLocaleTimeString('en-US') : '—',
+      updatedAt: newest ? new Date(newest).toLocaleString('en-US', Date.now() - new Date(newest) < 20 * 3600_000 ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—',
       confidence: conf.length ? conf.reduce((s, v) => s + v.confidence, 0) / conf.length : null,
     },
     vitals,

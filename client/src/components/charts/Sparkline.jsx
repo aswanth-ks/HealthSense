@@ -1,6 +1,7 @@
 import { LineChart, Line, YAxis, ResponsiveContainer } from 'recharts';
 
 export default function Sparkline({ data, color }) {
+  if (!data || data.length < 2) return null;
   const points = data.map((v, i) => ({ i, v }));
   return (
     <ResponsiveContainer width="100%" height="100%">

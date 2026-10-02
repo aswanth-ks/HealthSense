@@ -40,9 +40,17 @@ export default function HeartRateChart() {
       <p className="-mt-2 mb-4 flex items-baseline gap-2">
         <span className="text-3xl font-medium tracking-tight">{latest}</span>
         <span className="text-xs text-ink-mute">BPM</span>
-        <span className="ml-2 flex items-center gap-1.5 text-xs text-ink-soft"><LiveDot className="!h-1.5 !w-1.5" /> Live</span>
+        {data.length > 0 && <span className="ml-2 text-xs text-ink-soft">latest in this period</span>}
       </p>
       <div className="h-64">
+        {data.length === 0 ? (
+          <div className="grid h-full place-items-center rounded-xl bg-canvas text-center">
+            <div className="px-6">
+              <p className="text-sm font-medium">No heart-rate readings in this period</p>
+              <p className="mt-1 text-xs text-ink-mute">Wear your watch to start collecting data{range !== '7D' && <>, or <button onClick={() => setRange('7D')} className="text-brand-700 hover:underline">view the last 7 days</button></>}.</p>
+            </div>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
             <defs>
@@ -53,14 +61,15 @@ export default function HeartRateChart() {
             </defs>
             <CartesianGrid vertical={false} stroke="#e4ebe9" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#8a9895' }} interval="preserveStartEnd" minTickGap={40} />
-            <YAxis domain={[60, 90]} ticks={[60, 70, 80, 90]} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#8a9895' }} />
+            <YAxis domain={[(min) => Math.floor(Math.min(min, 60) / 10) * 10, (max) => Math.ceil(Math.max(max, 90) / 10) * 10]} allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#8a9895' }} />
             <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e4ebe9', fontSize: 12 }} formatter={(v) => [`${v} BPM`, 'Heart rate']} />
             <Area type="monotone" dataKey="bpm" stroke="#d94452" strokeWidth={2} fill="url(#hrFill)" />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
       <div className="mt-3 flex justify-between border-t border-line pt-3 text-xs text-ink-mute">
-        <span className="flex items-center gap-1.5"><LiveDot className="!h-1.5 !w-1.5" /> Live data from HealthSense Watch</span>
+        <span className="flex items-center gap-1.5"><LiveDot className="!h-1.5 !w-1.5" /> Data from HealthSense Watch</span>
         <span>Normal range <span className="text-ink">60–100 BPM</span></span>
       </div>
     </Card>
