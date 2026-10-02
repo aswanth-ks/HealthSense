@@ -14,83 +14,168 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const cycleDayOf = (date, start) => daysBetween(start, date) + 1;
 
 /**
- * Current cycle context.
- * settings: user.cycle ({ tracking, lastPeriodStart, avgLengthDays, lengthUnknown, typicalPeriodLength, regularity })
+ * Historical cycle lengths from consecutive recorded period starts. Pure.
+ * Returns the cycles sorted oldest → newest with cycleLength / endDate derived from the next start.
+ */
+export function recomputeLengths(cycles) {
+  const sorted = [...cycles].sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+  return sorted.map((c, i) => {
+    const next = sorted[i + 1];
+    const len = next ? daysBetween(c.startDate, next.startDate) : null;
+    // > 45 days between recorded starts most likely means a period in between wasn't recorded — flag it, don't use it
+    return { ...c, cycleLength: len, possibleGap: len != null && len > 45, endDate: next ? new Date(dayStart(next.startDate).getTime() - DAY) : null };
+  });
+}
+
+/** Validate a reported period: end may not be before start, dates may not be in the future. */
+export function validatePeriod({ start, end, now = new Date() }) {
+  const errors = [];
+  if (!start || Number.isNaN(new Date(start).getTime())) errors.push('A valid period start date is required.');
+  else if (dayStart(start) > dayStart(now)) errors.push('The period start date cannot be in the future.');
+  if (end != null && end !== '') {
+    if (Number.isNaN(new Date(end).getTime())) errors.push('The period end date is not valid.');
+    else if (start && dayStart(end) < dayStart(start)) errors.push('The period end date cannot be before the start date.');
+    else if (dayStart(end) > dayStart(now)) errors.push('The period end date cannot be in the future.');
+    else if (start && daysBetween(start, end) > 15) errors.push('A period longer than 15 days looks like a typing mistake — please check the dates.');
+  }
+  return errors;
+}
+
+/** Personal cycle baseline from recorded cycle lengths (median preferred). */
+export function cycleBaselineStats(cycles) {
+  const lengths = recomputeLengths(cycles).filter((c) => !c.possibleGap).map((c) => c.cycleLength).filter((n) => n != null && n >= 15 && n <= 45);
+  if (!lengths.length) return { status: 'developing', cycles_used: 0 };
+  const s = describe(lengths);
+  const sorted = [...lengths].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const sd = sorted.length > 1 ? s.sd : null;
+  const regularity = sorted.length < 3 ? null : sd <= 2 ? 'usually_regular' : sd <= 5 ? 'sometimes_irregular' : 'usually_irregular';
+  return {
+    status: sorted.length >= 3 ? 'established' : 'developing',
+    median_cycle_length: round(median, 1),
+    average_cycle_length: round(s.mean, 1),
+    min_cycle_length: sorted[0],
+    max_cycle_length: sorted[sorted.length - 1],
+    variation_days: sd != null ? round(sd, 1) : null,
+    cycles_used: sorted.length,
+    regularity,
+    confidence: round(clamp(0.45 + 0.1 * Math.min(sorted.length, 5) - (sd ?? 0) * 0.04, 0.3, 0.95), 2),
+  };
+}
+
+const REG_FROM_USER = { regular: 'usually_regular', somewhat_irregular: 'sometimes_irregular', very_irregular: 'usually_irregular', unsure: 'not_sure' };
+
+/**
+ * Deterministic confidence for the current-cycle estimate (a software data-confidence indicator — not
+ * clinically validated). Every factor is listed so the UI can show what the number is based on.
+ */
+export function cycleConfidence({ latestKnown, latestSource, previousKnown, baseline, lengthSource, regularity, daysSinceLatest, recentlyConfirmed }) {
+  if (!latestKnown) return { value: 0, factors: [] };
+  const factors = [];
+  let v = latestSource === 'user_reported' ? 0.55 : 0.4;
+  factors.push({ factor: 'Most recent period start reported', effect: '+' });
+  if (previousKnown) { v += 0.1; factors.push({ factor: 'Previous cycle history known', effect: '+' }); }
+  if (baseline?.cycles_used >= 2) { v += Math.min(0.15, 0.05 * baseline.cycles_used); factors.push({ factor: `${baseline.cycles_used} historical cycles analysed`, effect: '+' }); }
+  if (baseline?.variation_days != null) {
+    if (baseline.variation_days <= 2) { v += 0.08; factors.push({ factor: 'Historical cycle lengths are consistent', effect: '+' }); }
+    else if (baseline.variation_days > 5) { v -= 0.12; factors.push({ factor: 'Historical cycle lengths vary a lot', effect: '−' }); }
+  }
+  if (lengthSource === 'user_reported') { v += 0.05; factors.push({ factor: 'Typical cycle length reported by you', effect: '+' }); }
+  if (!lengthSource) { v -= 0.1; factors.push({ factor: 'Typical cycle length unknown', effect: '−' }); }
+  if (regularity === 'usually_irregular') { v -= 0.1; factors.push({ factor: 'Cycles reported as usually irregular', effect: '−' }); }
+  if (recentlyConfirmed) { v += 0.05; factors.push({ factor: 'Period start confirmed recently', effect: '+' }); }
+  if (daysSinceLatest > 45) { v -= 0.2; factors.push({ factor: 'Last recorded period was a long time ago', effect: '−' }); }
+  return { value: round(clamp(v, 0.1, 0.95), 2), factors };
+}
+
+/**
+ * Current cycle context. Nothing is assumed: without a reported most-recent period start there is no estimate,
+ * and an unknown cycle length is never replaced by a "standard" 28 days.
+ * settings: user.cycle ({ tracking, avgLengthDays, lengthUnknown, typicalPeriodLength, regularity, previousUnknown })
  * cycles: MenstrualCycle docs (any order)
  */
 export function cycleContext(settings = {}, cycles = [], now = new Date()) {
   if (!settings.tracking) return { tracking: false };
 
-  const sorted = [...cycles].filter((c) => new Date(c.startDate) <= now).sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-  let last = sorted[sorted.length - 1];
-  if (!last && settings.lastPeriodStart) last = { startDate: settings.lastPeriodStart, source: 'user_reported', confidence: 0.9 };
+  const sorted = recomputeLengths(cycles.filter((c) => dayStart(c.startDate) <= dayStart(now)));
+  const last = sorted[sorted.length - 1];
+  const baseline = cycleBaselineStats(sorted);
+  const regularityValue = baseline.regularity || REG_FROM_USER[settings.regularity] || 'not_sure';
+  const regularity = { value: regularityValue, source: baseline.regularity ? 'historical' : settings.regularity ? 'user_reported' : null, variabilityDays: baseline.variation_days ?? null };
 
-  // Typical cycle length: learned history > what the user told us > population default (clearly labelled)
-  const completed = sorted.map((c) => c.cycleLength).filter((n) => n >= 15 && n <= 60);
-  const hist = describe(completed);
+  // Typical cycle length: learned history (median) > user-reported > unknown (never a silent default)
   let length;
-  if (hist && hist.n >= 2) length = { days: Math.round(hist.mean), source: 'historical', confidence: round(clamp(0.9 - (hist.sd || 0) * 0.04 - (hist.n < 3 ? 0.1 : 0), 0.4, 0.92), 2), basedOn: `${hist.n} recorded cycles` };
+  if (baseline.cycles_used >= 1) length = { days: Math.round(baseline.median_cycle_length), source: 'historical', confidence: baseline.confidence, basedOn: `${baseline.cycles_used} recorded cycle${baseline.cycles_used > 1 ? 's' : ''}` };
   else if (!settings.lengthUnknown && settings.avgLengthDays) length = { days: settings.avgLengthDays, source: 'user_reported', confidence: 0.7, basedOn: 'what you told us' };
-  else length = { days: 28, source: 'ai_estimated', confidence: 0.35, basedOn: 'a typical cycle (your length is not known yet)' };
-
-  // Regularity: observed from history when possible
-  let regularity;
-  if (hist && hist.n >= 3) {
-    const r = hist.sd <= 2 ? 'regular' : hist.sd <= 5 ? 'somewhat_irregular' : 'very_irregular';
-    regularity = { value: r, source: 'historical', variabilityDays: round(hist.sd, 1) };
-  } else {
-    regularity = { value: settings.regularity || 'unsure', source: 'user_reported' };
-  }
+  else length = { days: null, source: null, confidence: 0, basedOn: 'unknown' };
 
   const periodLength = (() => {
     const known = sorted.map((c) => c.periodLength).filter(Boolean);
     if (known.length >= 2) return { days: Math.round(known.reduce((a, b) => a + b, 0) / known.length), source: 'historical' };
     if (settings.typicalPeriodLength) return { days: settings.typicalPeriodLength, source: 'user_reported' };
-    return { days: 5, source: 'ai_estimated' };
+    if (known.length === 1) return { days: known[0], source: 'user_reported' };
+    return { days: null, source: null };
   })();
 
   if (!last) {
-    return { tracking: true, known: false, length, regularity, periodLength, history: completed.length, message: 'Record the first day of your period to start cycle context.' };
+    return {
+      tracking: true, known: false, status: 'needs_setup', length, regularity, periodLength, baseline, history: 0,
+      message: "Tell HealthSense when your most recent period started to estimate your current cycle.",
+    };
   }
 
-  const cycleDay = cycleDayOf(now, last.startDate);
-  const overdue = cycleDay > length.days + (regularity.value === 'regular' ? 5 : 10);
-  const dayConfidence = round(overdue ? 0.3 : last.source === 'user_reported' ? 0.95 : last.confidence ?? 0.6, 2);
+  const previousKnown = sorted.length >= 2;
+  const status = previousKnown || length.source ? 'ready' : 'needs_more';
+  const cycleDayRaw = cycleDayOf(now, last.startDate);
+  const overdueLimit = length.days ? length.days + (regularityValue === 'usually_irregular' ? 15 : 10) : 45;
+  const overdue = cycleDayRaw > overdueLimit;
+  const conf = cycleConfidence({
+    latestKnown: true, latestSource: last.source, previousKnown, baseline, lengthSource: length.source, regularity: regularityValue,
+    daysSinceLatest: cycleDayRaw - 1, recentlyConfirmed: last.source === 'user_reported' && cycleDayRaw <= 7,
+  });
 
-  // Period status: observed when the user recorded start/end, otherwise an estimate
+  // Period status: observed when an end was recorded; otherwise estimated from period duration (if known)
   let period;
-  if (last.periodEndDate && dayStart(now) > dayStart(last.periodEndDate)) period = { status: 'not_on_period', source: 'user_reported' };
-  else if (last.periodEndDate) period = { status: 'on_period', source: 'user_reported' };
-  else if (cycleDay <= periodLength.days) period = { status: 'on_period', source: cycleDay <= 1 ? 'user_reported' : 'ai_estimated', note: 'Period end not recorded yet' };
-  else period = { status: 'not_on_period', source: 'ai_estimated' };
+  if (last.periodEndDate && dayStart(now) > dayStart(last.periodEndDate)) period = { status: 'not_on_period', label: 'Not currently on period', source: 'user_reported', confidence: 1 };
+  else if (last.periodEndDate) period = { status: 'on_period', label: 'Period ongoing', source: 'user_reported', confidence: 1 };
+  else if (periodLength.days && cycleDayRaw <= periodLength.days) period = { status: 'on_period', label: 'Period likely ongoing', source: 'ai_estimated', confidence: round(clamp(0.95 - 0.05 * (cycleDayRaw - 1), 0.5, 0.95), 2) };
+  else if (periodLength.days) period = { status: 'not_on_period', label: 'Period likely ended', source: 'ai_estimated', confidence: round(clamp(conf.value, 0.4, 0.9), 2) };
+  else if (cycleDayRaw === 1) period = { status: 'on_period', label: 'Period started today', source: 'user_reported', confidence: 1 };
+  else period = { status: 'unknown', label: 'Period status unknown', source: null, confidence: 0 };
 
-  // Expected next period — always an estimate
-  const nextDate = new Date(dayStart(last.startDate).getTime() + length.days * DAY);
-  const variabilityPenalty = regularity.value === 'very_irregular' ? 0.3 : regularity.value === 'somewhat_irregular' ? 0.15 : regularity.value === 'unsure' ? 0.1 : 0;
-  const nextPeriod = {
-    date: nextDate,
+  // Expected next period — only when a cycle length is known, and always an estimate
+  const nextPeriod = length.days ? {
+    date: new Date(dayStart(last.startDate).getTime() + length.days * DAY),
     source: length.source === 'historical' ? 'historical' : 'ai_estimated',
-    confidence: round(clamp(length.confidence - variabilityPenalty, 0.15, 0.9), 2),
-    windowDays: regularity.value === 'regular' ? 2 : regularity.value === 'somewhat_irregular' ? 4 : 7,
-  };
+    confidence: round(clamp(conf.value - (regularityValue === 'usually_irregular' ? 0.2 : regularityValue === 'sometimes_irregular' ? 0.1 : 0), 0.15, 0.9), 2),
+    windowDays: baseline.variation_days != null ? Math.max(2, Math.round(baseline.variation_days * 2)) : regularityValue === 'usually_regular' ? 3 : 7,
+  } : null;
 
-  // Estimated phase — only shown when we're reasonably confident
-  let phase = null;
-  const phaseConfidence = round(clamp(dayConfidence * length.confidence * (1 - variabilityPenalty), 0, 0.9), 2);
-  if (!overdue && phaseConfidence >= 0.45) {
-    const ov = length.days - 14;
-    const name = cycleDay <= periodLength.days ? 'menstrual' : cycleDay < ov - 1 ? 'follicular' : cycleDay <= ov + 1 ? 'ovulatory (estimated window)' : 'luteal';
-    phase = { name, source: 'ai_estimated', confidence: phaseConfidence };
+  // Broad phase only (no ovulation timing); "uncertain" when confidence is low or the length is unknown
+  let phase;
+  if (overdue || conf.value < 0.5) phase = { name: 'uncertain', label: 'Uncertain', source: null, confidence: conf.value };
+  else if (period.status === 'on_period' || (periodLength.days && cycleDayRaw <= periodLength.days)) phase = { name: 'menstrual', label: 'Menstrual', source: 'ai_estimated', confidence: conf.value };
+  else if (!length.days) phase = { name: 'uncertain', label: 'Uncertain', source: null, confidence: conf.value };
+  else {
+    const f = cycleDayRaw / length.days;
+    phase = f <= 0.4 ? { name: 'early_cycle', label: 'Early cycle' } : f <= 0.65 ? { name: 'mid_cycle', label: 'Mid-cycle' } : { name: 'late_cycle', label: 'Late cycle' };
+    phase = { ...phase, source: 'ai_estimated', confidence: conf.value };
   }
+
+  const basedOn = ['Most recent reported period', ...(previousKnown ? ['Previous cycle history'] : []), ...(length.source ? [`Typical cycle length (${length.source === 'historical' ? 'from your history' : 'reported by you'})`] : []), ...(baseline.variation_days != null ? ['Historical consistency'] : [])];
 
   return {
     tracking: true,
     known: true,
+    status,
     lastPeriodStart: last.startDate,
+    lastPeriodEnd: last.periodEndDate || null,
     startSource: last.source,
-    cycleDay: overdue ? null : cycleDay,
-    cycleDayRaw: cycleDay,
-    dayConfidence,
+    cycleDay: overdue ? null : cycleDayRaw,
+    cycleDayRaw,
+    cycleDaySource: 'ai_estimated',
+    dayConfidence: conf.value,
     overdue,
     period,
     periodLength,
@@ -98,8 +183,16 @@ export function cycleContext(settings = {}, cycles = [], now = new Date()) {
     regularity,
     nextPeriod,
     phase,
-    history: completed.length,
-    confidence: round((dayConfidence + length.confidence) / 2, 2),
+    baseline,
+    basedOn,
+    confidenceFactors: conf.factors,
+    history: baseline.cycles_used,
+    confidence: conf.value,
+    missing: [
+      ...(!previousKnown && !settings.previousUnknown ? ['previous_period_start'] : []),
+      ...(!length.source ? ['typical_cycle_length'] : []),
+      ...(!periodLength.days ? ['period_duration'] : []),
+    ],
   };
 }
 

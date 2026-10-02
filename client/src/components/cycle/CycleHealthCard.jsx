@@ -28,7 +28,7 @@ export default function CycleHealthCard({ cycle }) {
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-50 text-rose-500"><CalendarHeart size={18} /></span>
           <div>
             <p className="eyebrow">Cycle &amp; health</p>
-            <h2 className="mt-0.5 text-lg font-medium">{c.known ? (c.cycleDay ? `Cycle day ${c.cycleDay}` : 'Cycle day uncertain') : 'Cycle context'}</h2>
+            <h2 className="mt-0.5 text-lg font-medium">{c.known ? (c.cycleDay ? `Cycle day ${c.cycleDay} · estimated` : 'Cycle day uncertain') : "Let's understand your cycle"}</h2>
           </div>
         </div>
         <div className="flex gap-2">
@@ -44,23 +44,23 @@ export default function CycleHealthCard({ cycle }) {
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl bg-canvas px-3 py-2.5">
               <p className="text-[11px] text-ink-mute">Period status</p>
-              <p className="mt-0.5 text-sm font-medium">{PERIOD_LABEL[c.period?.status] || '—'}</p>
+              <p className="mt-0.5 text-sm font-medium">{c.period?.label || PERIOD_LABEL[c.period?.status] || 'Unknown'}</p>
               <Provenance source={c.period?.source} className="mt-1" />
             </div>
             <div className="rounded-xl bg-canvas px-3 py-2.5">
               <p className="text-[11px] text-ink-mute">Cycle day</p>
               <p className="mt-0.5 text-sm font-medium">{c.cycleDay ?? '—'}{c.overdue && <span className="text-xs font-normal text-amber-700"> · period not recorded</span>}</p>
-              <Provenance source={c.startSource} confidence={c.dayConfidence} className="mt-1" />
+              <Provenance source="ai_estimated" confidence={c.confidence} className="mt-1" />
             </div>
             <div className="rounded-xl bg-canvas px-3 py-2.5">
               <p className="text-[11px] text-ink-mute">Expected period</p>
-              <p className="mt-0.5 text-sm font-medium">{fmtDay(c.nextPeriod?.date)} <span className="text-xs font-normal text-ink-mute">±{c.nextPeriod?.windowDays}d</span></p>
+              <p className="mt-0.5 text-sm font-medium">{c.nextPeriod ? <>{fmtDay(c.nextPeriod.date)} <span className="text-xs font-normal text-ink-mute">±{c.nextPeriod.windowDays}d</span></> : 'Not estimated'}</p>
               <Provenance source={c.nextPeriod?.source} confidence={c.nextPeriod?.confidence} className="mt-1" />
             </div>
             <div className="rounded-xl bg-canvas px-3 py-2.5" title={PHASE_HINT}>
               <p className="text-[11px] text-ink-mute">Phase</p>
-              <p className="mt-0.5 text-sm font-medium capitalize">{c.phase?.name || 'Not estimated'}</p>
-              {c.phase && <Provenance source="ai_estimated" confidence={c.phase.confidence} className="mt-1" />}
+              <p className="mt-0.5 text-sm font-medium">{c.phase?.label || 'Uncertain'}</p>
+              {c.phase?.source && <Provenance source="ai_estimated" confidence={c.phase.confidence} className="mt-1" />}
             </div>
           </div>
 

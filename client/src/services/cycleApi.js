@@ -28,3 +28,6 @@ export async function logCycleSymptom(body) {
   const res = await sendOrQueue('cycle', 'post', '/me/cycle/symptoms', { ...body, ts: body.ts || new Date().toISOString() });
   return res.pending ? { pending: true } : res.data;
 }
+
+export const addPreviousCycle = (body) => api.post('/me/menstrual/cycles', body).then((r) => r.data);
+export const markPreviousUnknown = () => api.put('/me/cycle/settings', { tracking: true, previousUnknown: true }).then((r) => r.data);

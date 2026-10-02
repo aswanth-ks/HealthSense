@@ -8,7 +8,7 @@ import TimelineEvent from '../models/TimelineEvent.js';
 import Question from '../models/Question.js';
 import Cycle from '../models/Cycle.js';
 import User from '../models/User.js';
-import { cycleContext, cycleBaselines, recurringPattern, dayContext, cycleDayOf } from '../engines/menstrualEngine.js';
+import { cycleContext, cycleBaselines, recurringPattern, dayContext, cycleDayOf, recomputeLengths, validatePeriod } from '../engines/menstrualEngine.js';
 
 const DAY = 24 * 3600_000;
 const dayStart = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -110,8 +110,8 @@ export async function startPeriod(userId, date = new Date(), { source = 'user_re
   await Question.updateMany({ userId, code: 'cycle.period_started', status: 'open' }, { $set: { status: 'answered', answer: true, answeredAt: new Date() } });
   if (!silent) {
     await TimelineEvent.create({
-      userId, ts: day, kind: 'cycle', title: 'Period started',
-      detail: latest?.cycleLength ? `Previous cycle length: ${latest.cycleLength} days.` : 'First recorded period.',
+      userId, ts: day, kind: 'cycle', title: 'Period start reported',
+      detail: `Source: USER_REPORTED.${latest?.cycleLength ? ` Previous cycle length: ${latest.cycleLength} days.` : ' First recorded period.'}`,
     });
   }
   return cycle;
@@ -168,3 +168,57 @@ export async function deleteAllCycleData(userId) {
 }
 
 export { cycleDayOf };
+
+// ---------- Cycle history ----------
+
+const httpErr = (status, message) => Object.assign(new Error(message), { status });
+
+/** Re-derive every cycle's length/end from consecutive starts (after adds, edits, deletes). */
+export async function recomputeAllLengths(userId) {
+  const cycles = await MenstrualCycle.find({ userId }).lean();
+  for (const c of recomputeLengths(cycles)) {
+    await MenstrualCycle.updateOne({ _id: c._id }, c.cycleLength != null
+      ? { $set: { cycleLength: c.cycleLength, endDate: c.endDate } }
+      : { $unset: { cycleLength: '', endDate: '' } });
+  }
+  const latest = cycles.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0];
+  await User.updateOne({ _id: userId }, latest ? { $set: { 'cycle.lastPeriodStart': latest.startDate } } : { $unset: { 'cycle.lastPeriodStart': '' } });
+}
+
+/**
+ * Add a (usually previous) cycle reported by the user. Validated; duplicates within 10 days of an existing
+ * start are rejected; historical cycles are never overwritten.
+ */
+export async function addHistoricalCycle(userId, { start, end, confidence = 1, note, silent = false }) {
+  const errors = validatePeriod({ start, end });
+  if (errors.length) throw httpErr(400, errors[0]);
+  const day = dayStart(start);
+  const near = await MenstrualCycle.findOne({ userId, startDate: { $gte: new Date(day - 10 * DAY), $lte: new Date(day.getTime() + 10 * DAY) } }).lean();
+  if (near) throw httpErr(409, `A period starting ${fmtDay(near.startDate)} is already recorded close to that date.`);
+  const doc = await MenstrualCycle.create({
+    userId, startDate: day, source: 'user_reported', confidence,
+    ...(end ? { periodEndDate: dayStart(end), periodLength: Math.round((dayStart(end) - day) / DAY) + 1 } : {}),
+  });
+  await recomputeAllLengths(userId);
+  if (!silent) {
+    await TimelineEvent.create({ userId, kind: 'cycle', title: 'Cycle history added', detail: `Period starting ${fmtDay(day)}${end ? ` – ${fmtDay(end)}` : ''}. Source: USER_REPORTED${confidence < 1 ? ` (approximate, ${Math.round(confidence * 100)}% confidence)` : ''}.${note ? ` ${note}` : ''}` });
+  }
+  return doc;
+}
+
+/** Answer to "Do you remember approximately when your previous period started?" */
+export async function applyPreviousStartAnswer(userId, answer) {
+  const offsets = { 'About 3–4 weeks before': 25, 'About 5–6 weeks before': 38, 'More than 6 weeks before': 50 };
+  if (!offsets[answer]) {
+    await User.updateOne({ _id: userId }, { $set: { 'cycle.previousUnknown': true } });
+    return null;
+  }
+  const latest = await MenstrualCycle.findOne({ userId }).sort({ startDate: -1 }).lean();
+  if (!latest) return null;
+  const start = new Date(dayStart(latest.startDate).getTime() - offsets[answer] * DAY);
+  try {
+    return await addHistoricalCycle(userId, { start, confidence: 0.6, note: `From your answer “${answer}”.` });
+  } catch {
+    return null;
+  }
+}

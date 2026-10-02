@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema(
       typicalPeriodLength: Number,
       regularity: { type: String, enum: ['regular', 'somewhat_irregular', 'very_irregular', 'unsure', null], default: null },
       setupAt: Date,
+      previousUnknown: { type: Boolean, default: false }, // user said they don't remember earlier periods
+      // Optional, user-reported symptoms during previous cycles (setup questionnaire)
+      reportedSymptoms: [{ _id: false, symptom: String, present: { type: String, enum: ['yes', 'no', 'not_sure'] }, severity: Number }],
     },
     // Monitoring ranges configured by the user (Settings page)
     ranges: {

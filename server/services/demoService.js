@@ -114,7 +114,7 @@ export const SCENARIOS = {
   async menstrual(userId) {
     await SCENARIOS.reset(userId);
     const today = cycleWindow(new Date()).start.getTime();
-    const starts = [today - 57 * DAY_MS, today - 29 * DAY_MS, today - 1 * DAY_MS]; // current period: day 2 today
+    const starts = [today - 78 * DAY_MS, today - 50 * DAY_MS, today - 22 * DAY_MS]; // 3 × 28-day cycles; today = cycle day 23
     const first = starts[0];
     const dayIndexOf = (t) => Math.floor((t - first) / DAY_MS); // generator 'endo' flare = days 0–2 of every 28
 
@@ -132,7 +132,7 @@ export const SCENARIOS = {
     const events = [];
     for (const [i, s] of starts.entries()) {
       const cyc = await startPeriod(userId, new Date(s));
-      if (i < 2) await MenstrualCycle.updateOne({ _id: cyc._id }, { $set: { periodEndDate: new Date(s + 4 * DAY_MS), periodLength: 5 } });
+      await MenstrualCycle.updateOne({ _id: cyc._id }, { $set: { periodEndDate: new Date(s + 4 * DAY_MS), periodLength: 5 } });
       for (let d = 0; d < 3; d += 1) {
         const ts = new Date(s + d * DAY_MS + 14 * 3600_000);
         if (ts > new Date()) break;
@@ -155,7 +155,7 @@ export const SCENARIOS = {
     await TimelineEvent.insertMany(events);
     await markDevice(userId, true);
     await updateCycles(userId, { full: true });
-    return 'Three menstrual cycles generated (with sensor data). Each showed strong pain, fatigue and reduced activity on cycle days 1–3 — the system learns this personal pattern and adapts questions and monitoring.';
+    return 'Demo history: three 28-day cycles (with sensor data); today is cycle day 23. Days 1–3 of each cycle showed strong pain, fatigue and reduced activity — HealthSense learns this personal pattern and uses it in the 3-Day Assessment and next monitoring focus. (Demo data only.)';
   },
 
   /**

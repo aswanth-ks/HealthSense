@@ -62,7 +62,7 @@ export function updateCycles(userId, opts = {}) {
 /** Build/refresh every cycle from the first reading to today, then recompute the baseline. */
 async function doUpdateCycles(userId, { full = false } = {}) {
   const first = await Reading.findOne({ userId }).sort({ ts: 1 }).select('ts').lean();
-  if (!first) return null;
+  if (!first) { await runTriage(userId); return null; }
 
   const { start: firstStart } = cycleWindow(first.ts);
   const { start: todayStart } = cycleWindow(new Date());

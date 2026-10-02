@@ -44,7 +44,7 @@ test('3-day sleep pattern: triage from engine, patterns with evidence, baseline 
   assert.equal(a.next_24h_focus[0].metric, 'resp');
   assert.equal(a.adaptive_monitoring.generated_from, 'previous 3-day assessment');
   assert.equal(a.recommended_actions[0].type, 'question');
-  assert.equal(a.cycle_context.enabled, false, 'no menstrual section when tracking is off');
+  assert.equal(a.cycle_context, null, 'no menstrual section when tracking is off');
   assert.ok(a.data_quality.percentages.measured > 90);
 });
 

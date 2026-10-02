@@ -29,6 +29,14 @@ router.post('/cycle/symptoms', cyc.logCycleSymptom);
 router.delete('/cycle/symptoms/:id', cyc.deleteSymptom);
 router.put('/cycle/cycles/:id', cyc.editCycle);
 router.delete('/cycle/cycles/:id', cyc.deleteCycle);
+// Menstrual history API (same handlers, contract names)
+router.get('/menstrual/cycles', cyc.listCycles);
+router.post('/menstrual/cycles', cyc.addCycle);
+router.put('/menstrual/cycles/:id', cyc.editCycle);
+router.delete('/menstrual/cycles/:id', cyc.deleteCycle);
+router.get('/menstrual/current', cyc.currentCycle);
+router.get('/menstrual/baseline', cyc.cycleBaseline);
+router.post('/cycle/cycles', cyc.addCycle);
 router.get('/timeline', getTimeline);
 router.post('/checkin', checkin);
 router.get('/symptoms', getSymptoms);

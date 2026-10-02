@@ -47,7 +47,7 @@ export function sampleAssessment() {
       { factor: 'reduced_activity', label: 'Reduced activity', detail: '-24% vs your usual', confidence: 0.8 },
       { factor: 'night_disturbance', label: 'Repeated nighttime disturbance', detail: '2 of 3 nights', confidence: 0.87 },
     ],
-    cycle_context: { enabled: false },
+    cycle_context: null,
     recommended_actions: [{ type: 'question', priority: 'high', text: 'Continue monitoring and complete the requested follow-up questions.', reason: 'Additional information is needed to tell whether the recent pattern is persistent.' }],
     professional_evaluation: { level: 'MODERATE', recommendation: 'consider', headline: 'A recurring pattern has been observed.', text: 'Consider discussing the pattern with a healthcare professional, particularly if symptoms persist or interfere with normal activities.', reason: 'Repeated nighttime breathing irregularity and fatigue across multiple days.', reasons: ['5 repeated nighttime respiratory abnormalities', '3 associated SpO₂ deviations', 'User reported daytime fatigue'], evidence_ids: ['ev_3', 'ev_4', 'ev_5'], not_diagnostic: true },
     next_24h_focus: [

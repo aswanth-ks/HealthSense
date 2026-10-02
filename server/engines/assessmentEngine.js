@@ -7,7 +7,7 @@
 import { describe, round } from './stats.js';
 import { interpret } from './baselineEngine.js';
 
-export const ENGINE_VERSION = 'assessment-engine-1.0.1';
+export const ENGINE_VERSION = 'assessment-engine-1.1.0';
 const DAY = 24 * 3600_000;
 const LEVELS = ['LOW', 'MONITOR', 'MODERATE', 'HIGH'];
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -262,16 +262,24 @@ export function buildAssessment({ days = [], history = [], baseline = {}, triage
   if (menstrual?.context?.tracking && menstrual.context.cycleDay) contributing.push({ factor: 'cycle_context', label: 'Menstrual cycle context', detail: `Cycle day ${menstrual.context.cycleDay}${menstrual.context.period?.status === 'on_period' ? ' (period)' : ''}`, confidence: menstrual.context.dayConfidence, evidence_ids: [] });
 
   // ---------------- Cycle context (only if enabled) ----------------
-  const cycleContext = menstrual?.context?.tracking ? {
+  const mc = menstrual?.context;
+  const cycleContext = mc?.tracking ? {
     enabled: true,
-    cycle_day: menstrual.context.cycleDay ?? null,
-    period_status: menstrual.context.period?.status ?? null,
-    period_source: menstrual.context.period?.source ?? null,
-    confidence: menstrual.context.confidence ?? null,
-    phase: menstrual.context.phase ? { name: menstrual.context.phase.name, source: 'AI_ESTIMATED', confidence: menstrual.context.phase.confidence } : null,
+    status: mc.status,
+    cycle_day: mc.cycleDay ?? null,
+    data_source: 'AI_ESTIMATED',
+    confidence: mc.confidence ?? null,
+    cycle_started: mc.lastPeriodStart ?? null,
+    typical_cycle_length: mc.length?.days ?? null,
+    typical_cycle_length_source: mc.length?.source ? prov(mc.length.source) : null,
+    period_status: mc.period?.status ?? null,
+    period_label: mc.period?.label ?? null,
+    period_source: mc.period?.source ? prov(mc.period.source) : null,
+    phase: mc.phase ? { name: mc.phase.name, label: mc.phase.label, source: 'AI_ESTIMATED', confidence: mc.phase.confidence } : null,
+    cycles_analyzed: mc.baseline?.cycles_used ?? 0,
     recent_cycles: (menstrual.pattern?.perCycle || []).map((c) => ({ start: c.startDate, pain: c.pain, fatigue: c.fatigue, activity_drop_percent: c.activityDropPct, sleep_hours: c.sleepHours, matched: c.matched })),
     pattern: menstrual.pattern?.detected ? { summary: menstrual.pattern.summary, statement: menstrual.pattern.statement, cycles_matched: menstrual.pattern.cyclesMatched } : null,
-  } : { enabled: false };
+  } : null;
 
   // ---------------- Actions / professional evaluation / next focus ----------------
   const openQs = questions.filter((q) => q.status === 'open');

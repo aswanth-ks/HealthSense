@@ -66,13 +66,26 @@ export function cycleQuestions({ context, pattern, answered }) {
   const out = [];
   if (!context?.tracking || !context.known) return out;
 
+  // Missing history: only the latest period is known → ask (once) for the previous one
+  if (context.missing?.includes('previous_period_start') && !answered.has('cycle.previous_start')) {
+    out.push({
+      code: 'cycle.previous_start', field: 'cycle', kind: 'choice',
+      options: ['About 3–4 weeks before', 'About 5–6 weeks before', 'More than 6 weeks before', 'Not sure'],
+      text: 'Do you remember approximately when your previous period started?',
+      reason: 'HealthSense knows your most recent period start but not the one before it. Knowing it improves your cycle estimate.',
+    });
+  }
+
   // Missing data: the expected period hasn't been recorded
-  if (context.cycleDayRaw > context.length.days + 3 && !answered.has('cycle.period_started')) {
-    const expected = new Date(context.nextPeriod.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const overdueBy = context.nextPeriod ? context.cycleDayRaw > context.length.days + 3 : context.cycleDayRaw > 45;
+  if (overdueBy && !answered.has('cycle.period_started')) {
+    const expected = context.nextPeriod ? new Date(context.nextPeriod.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
     out.push({
       code: 'cycle.period_started', field: 'cycle', kind: 'yesno',
-      text: `Has your period started since ${expected}?`,
-      reason: `Your next period was estimated for ${expected} (${Math.round(context.nextPeriod.confidence * 100)}% confidence) but no start has been recorded. Cycle context for your other readings depends on it.`,
+      text: expected ? `Has your period started since ${expected}?` : 'Has a new period started since your last recorded one?',
+      reason: expected
+        ? `Your next period was estimated for ${expected} (${Math.round(context.nextPeriod.confidence * 100)}% confidence) but no start has been recorded. Cycle context for your other readings depends on it.`
+        : 'Your last recorded period was a while ago. Cycle context for your other readings depends on it.',
     });
   }
 

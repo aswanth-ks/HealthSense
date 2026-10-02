@@ -256,10 +256,10 @@ export default function ThreeDayAssessment() {
             <Section id="cycle" tone="rose" icon={CalendarHeart} eyebrow="Menstrual cycle" title="Cycle context">
               <div className="card p-5">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Current cycle</p><p className="text-sm font-medium">{a.cycle_context.cycle_day ? `Day ${a.cycle_context.cycle_day}` : 'Uncertain'}</p></div>
-                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Period status</p><p className="text-sm font-medium">{a.cycle_context.period_status === 'on_period' ? 'On period' : a.cycle_context.period_status ? 'Not on period' : '—'}</p></div>
+                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Current cycle</p><p className="text-sm font-medium">{a.cycle_context.cycle_day ? `Day ${a.cycle_context.cycle_day}` : 'Uncertain'} <span className="rounded bg-amber-50 px-1 text-[10px] font-normal text-amber-700">Estimated</span></p></div>
+                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Period status</p><p className="text-sm font-medium">{a.cycle_context.period_label || 'Unknown'}</p></div>
                   <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Cycle confidence</p><p className="text-sm font-medium">{pct(a.cycle_context.confidence)}</p></div>
-                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Phase (estimated)</p><p className="text-sm font-medium capitalize">{a.cycle_context.phase?.name || 'Not estimated'}</p></div>
+                  <div className="rounded-xl bg-canvas px-3 py-2"><p className="text-[10px] text-ink-mute">Phase (estimated)</p><p className="text-sm font-medium capitalize">{a.cycle_context.phase?.label || 'Uncertain'}</p></div>
                 </div>
                 {a.cycle_context.recent_cycles?.length > 0 && (
                   <ul className="mt-3 divide-y divide-line text-xs">

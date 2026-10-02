@@ -70,6 +70,7 @@ async function gather(user, start, end) {
     ENGINE_VERSION,
     days.map((d) => [d.start, d.updatedAt]), latest?.updatedAt, baselineDoc?.updatedAt, symptoms.length,
     questions.map((q) => [q._id, q.status]), timeline.length, counts, tracking, menstrual?.pattern?.cyclesMatched,
+    menstrual?.context?.lastPeriodStart, menstrual?.context?.history, menstrual?.context?.confidence,
   ])).digest('hex');
 
   return {

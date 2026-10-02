@@ -10,7 +10,7 @@ import { ACTIVITY_STEPS } from '../engines/missingDataEngine.js';
 import { updateCycles } from '../services/cycleService.js';
 import { SLOT } from '../services/loopService.js';
 import { emitToUser } from '../utils/realtime.js';
-import { startPeriod } from '../services/menstrualService.js';
+import { startPeriod, applyPreviousStartAnswer } from '../services/menstrualService.js';
 
 const SYMPTOM_TYPES = ['pain', 'cramp', 'fatigue', 'wake_sudden', 'headache', 'mood', 'bloating', 'nausea', 'dizziness', 'breathless', 'other'];
 const clampNum = (v, lo, hi) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.min(hi, Math.max(lo, Number(v))));
@@ -132,6 +132,9 @@ async function applyAnswer(userId, q, answer) {
       break;
     case 'sleep.snoring':
       if (yes) await SymptomLog.create({ userId, type: 'other', severity: 5, notes: 'Reported loud snoring / witnessed pauses', source: 'reported' });
+      break;
+    case 'cycle.previous_start':
+      await applyPreviousStartAnswer(userId, answer);
       break;
     case 'cycle.period_started':
       if (yes) await startPeriod(userId, new Date());

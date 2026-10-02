@@ -6,8 +6,8 @@ import MenstrualSymptom from '../models/MenstrualSymptom.js';
 import CycleBaseline from '../models/CycleBaseline.js';
 import TimelineEvent from '../models/TimelineEvent.js';
 import { asyncHandler, httpError } from '../middleware/errorHandler.js';
-import { cycleContext, recurringPattern } from '../engines/menstrualEngine.js';
-import { startPeriod, endPeriod, addCycleSymptom, deleteAllCycleData, cycleSymptoms } from '../services/menstrualService.js';
+import { cycleContext, recurringPattern, recomputeLengths, validatePeriod, cycleBaselineStats } from '../engines/menstrualEngine.js';
+import { startPeriod, endPeriod, addCycleSymptom, deleteAllCycleData, cycleSymptoms, addHistoricalCycle, recomputeAllLengths } from '../services/menstrualService.js';
 import { updateCycles } from '../services/cycleService.js';
 import Cycle from '../models/Cycle.js';
 
@@ -37,10 +37,11 @@ export const getCycle = asyncHandler(async (req, res) => {
     settings: {
       lastPeriodStart: settings.lastPeriodStart, avgLengthDays: settings.avgLengthDays, lengthUnknown: settings.lengthUnknown,
       typicalPeriodLength: settings.typicalPeriodLength, regularity: settings.regularity, setupAt: settings.setupAt,
+      previousUnknown: settings.previousUnknown, reportedSymptoms: settings.reportedSymptoms || [],
     },
     context: cycleContext(settings, cycles),
     cycles: cycles.map((c) => ({
-      id: c._id, startDate: c.startDate, endDate: c.endDate, periodEndDate: c.periodEndDate, cycleLength: c.cycleLength,
+      id: c._id, startDate: c.startDate, endDate: c.endDate, periodEndDate: c.periodEndDate, cycleLength: c.cycleLength, possibleGap: (c.cycleLength ?? 0) > 45,
       periodLength: c.periodLength, source: c.source, confidence: c.confidence, flow: c.flow,
     })),
     symptoms: symptoms.map((s) => ({ id: s._id, ts: s.ts, symptom: s.symptom, label: s.label, severity: s.severity, durationHours: s.durationHours, activityImpact: s.activityImpact, flow: s.flow, source: s.source, confidence: s.confidence, cycleId: s.cycleId, notes: s.notes })),
@@ -66,17 +67,52 @@ export const updateSettings = asyncHandler(async (req, res) => {
 
   const next = { ...c, tracking: true };
   if (b.lengthUnknown !== undefined) next.lengthUnknown = !!b.lengthUnknown;
-  if (b.avgLengthDays !== undefined) next.avgLengthDays = num(b.avgLengthDays, 15, 60) ?? c.avgLengthDays;
-  if (b.typicalPeriodLength !== undefined) next.typicalPeriodLength = num(b.typicalPeriodLength, 1, 15);
+  if (b.avgLengthDays !== undefined) next.avgLengthDays = b.avgLengthDays === null ? undefined : num(b.avgLengthDays, 15, 90) ?? c.avgLengthDays;
+  if (b.lengthUnknown) next.avgLengthDays = undefined; // unknown stays unknown — never a silent 28
+  if (b.typicalPeriodLength !== undefined) next.typicalPeriodLength = b.typicalPeriodLength === null ? undefined : num(b.typicalPeriodLength, 1, 15);
   if (b.regularity !== undefined) next.regularity = REGULARITY.includes(b.regularity) ? b.regularity : 'unsure';
+  if (b.previousUnknown !== undefined) next.previousUnknown = !!b.previousUnknown;
+  if (Array.isArray(b.reportedSymptoms)) {
+    next.reportedSymptoms = b.reportedSymptoms
+      .filter((x) => x && typeof x.symptom === 'string' && ['yes', 'no', 'not_sure'].includes(x.present))
+      .slice(0, 12)
+      .map((x) => ({ symptom: x.symptom.slice(0, 40), present: x.present, severity: x.present === 'yes' ? num(x.severity, 1, 10) : undefined }));
+  }
+
+  // Validate every reported date before saving anything
+  const starts = [b.lastPeriodStart, ...(Array.isArray(b.previousStarts) ? b.previousStarts : [])].filter(Boolean);
+  const errs = [
+    ...(b.lastPeriodStart ? validatePeriod({ start: b.lastPeriodStart, end: b.lastPeriodEnd || null }) : []),
+    ...(Array.isArray(b.previousStarts) ? b.previousStarts.filter(Boolean).flatMap((d) => validatePeriod({ start: d })) : []),
+  ];
+  if (b.lastPeriodStart && (b.previousStarts || []).some((d) => d && new Date(d) >= new Date(b.lastPeriodStart))) errs.push('Previous period starts must be before the most recent one.');
+  if (errs.length) throw httpError(400, errs[0]);
+
   if (!c.setupAt) next.setupAt = new Date();
   req.user.cycle = next;
   await req.user.save();
 
-  if (b.lastPeriodStart && validDate(b.lastPeriodStart)) await startPeriod(userId, new Date(b.lastPeriodStart), { silent: false });
+  // Historical cycles first (oldest → newest), then the most recent period; nothing is overwritten
+  const prev = (b.previousStarts || []).filter(Boolean).map((d) => new Date(d)).sort((x, y) => x - y);
+  for (const d of prev) await addHistoricalCycle(userId, { start: d, silent: true }).catch(() => {});
+  if (b.lastPeriodStart) {
+    await addHistoricalCycle(userId, { start: b.lastPeriodStart, end: b.lastPeriodEnd || null, silent: true }).catch(() => {});
+  }
+  if (starts.length) {
+    await TimelineEvent.create({
+      userId, kind: 'cycle', title: 'Cycle history added',
+      detail: `${starts.length} period start${starts.length > 1 ? 's' : ''} reported (most recent ${new Date(b.lastPeriodStart || starts[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}). Source: USER_REPORTED.`,
+    });
+  }
   if (!c.tracking) await TimelineEvent.create({ userId, kind: 'info', title: 'Menstrual cycle tracking turned on', detail: 'Cycle context is now used to interpret your other readings.' });
+
+  // Record the resulting estimate (clearly labelled) on the timeline
+  const ctx = cycleContext(next, await MenstrualCycle.find({ userId }).lean());
+  if (ctx.cycleDay) {
+    await TimelineEvent.create({ userId, kind: 'cycle', title: `Current cycle estimated as Day ${ctx.cycleDay}`, detail: `Source: AI_ESTIMATED · Confidence ${Math.round(ctx.confidence * 100)}%.` });
+  }
   await refresh(userId);
-  res.json({ tracking: true });
+  res.json({ tracking: true, context: ctx });
 });
 
 /** POST /api/me/cycle/period/start { date } · POST /api/me/cycle/period/end { date } */
@@ -116,6 +152,9 @@ const ownId = (id) => { if (!mongoose.isValidObjectId(id)) throw httpError(400, 
 export const editCycle = asyncHandler(async (req, res) => {
   const c = await MenstrualCycle.findOne({ _id: ownId(req.params.id), userId: req.user._id });
   if (!c) throw httpError(404, 'Cycle not found');
+  const errs = validatePeriod({ start: req.body?.startDate || c.startDate, end: req.body?.periodEndDate === undefined ? c.periodEndDate : req.body.periodEndDate });
+  if (errs.length) throw httpError(400, errs[0]);
+  const before = c.startDate;
   if (validDate(req.body?.startDate)) c.startDate = new Date(req.body.startDate);
   if (req.body?.periodEndDate === null) { c.periodEndDate = undefined; c.periodLength = undefined; }
   else if (validDate(req.body?.periodEndDate)) {
@@ -125,14 +164,8 @@ export const editCycle = asyncHandler(async (req, res) => {
   c.source = 'user_reported';
   c.confidence = 1;
   await c.save();
-  // Re-derive cycle lengths from consecutive starts
-  const all = await MenstrualCycle.find({ userId: req.user._id }).sort({ startDate: 1 });
-  for (let i = 0; i < all.length; i += 1) {
-    const next = all[i + 1];
-    all[i].cycleLength = next ? Math.round((new Date(next.startDate).setHours(0, 0, 0, 0) - new Date(all[i].startDate).setHours(0, 0, 0, 0)) / DAY) : undefined;
-    all[i].endDate = next ? new Date(new Date(next.startDate).getTime() - DAY) : undefined;
-    await all[i].save();
-  }
+  await recomputeAllLengths(req.user._id);
+  await TimelineEvent.create({ userId: req.user._id, kind: 'cycle', title: 'Cycle history corrected', detail: `Period ${new Date(before).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} updated by you. Cycle lengths and estimates were recalculated.` });
   await refresh(req.user._id);
   res.json({ ok: true });
 });
@@ -141,13 +174,8 @@ export const deleteCycle = asyncHandler(async (req, res) => {
   const c = await MenstrualCycle.findOneAndDelete({ _id: ownId(req.params.id), userId: req.user._id });
   if (!c) throw httpError(404, 'Cycle not found');
   await MenstrualSymptom.updateMany({ cycleId: c._id }, { $unset: { cycleId: '' } });
-  const prev = await MenstrualCycle.findOne({ userId: req.user._id, startDate: { $lt: c.startDate } }).sort({ startDate: -1 });
-  if (prev) {
-    const next = await MenstrualCycle.findOne({ userId: req.user._id, startDate: { $gt: prev.startDate } }).sort({ startDate: 1 });
-    prev.cycleLength = next ? Math.round((new Date(next.startDate) - new Date(prev.startDate)) / DAY) : undefined;
-    prev.endDate = next ? new Date(new Date(next.startDate).getTime() - DAY) : undefined;
-    await prev.save();
-  }
+  await recomputeAllLengths(req.user._id);
+  await TimelineEvent.create({ userId: req.user._id, kind: 'cycle', title: 'Cycle history corrected', detail: `Period record ${new Date(c.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} removed by you.` });
   await refresh(req.user._id);
   res.json({ ok: true });
 });
@@ -164,4 +192,30 @@ export const deleteAll = asyncHandler(async (req, res) => {
   await deleteAllCycleData(req.user._id);
   await refresh(req.user._id);
   res.json({ ok: true });
+});
+
+/** GET /api/me/menstrual/cycles — cycle history with derived lengths (newest first). */
+export const listCycles = asyncHandler(async (req, res) => {
+  const cycles = recomputeLengths(await MenstrualCycle.find({ userId: req.user._id }).lean()).reverse();
+  res.json(cycles.map((c) => ({ id: c._id, startDate: c.startDate, endDate: c.endDate, periodEndDate: c.periodEndDate, cycleLength: c.cycleLength, possibleGap: c.possibleGap, periodLength: c.periodLength, source: c.source, confidence: c.confidence })));
+});
+
+/** POST /api/me/menstrual/cycles { startDate, periodEndDate? } — add a previous (or missing) cycle. */
+export const addCycle = asyncHandler(async (req, res) => {
+  requireTracking(req);
+  const doc = await addHistoricalCycle(req.user._id, { start: req.body?.startDate, end: req.body?.periodEndDate || null });
+  await refresh(req.user._id);
+  res.status(201).json({ id: doc._id });
+});
+
+/** GET /api/me/menstrual/current — current cycle estimate with provenance + confidence factors. */
+export const currentCycle = asyncHandler(async (req, res) => {
+  if (!req.user.cycle?.tracking) return res.json({ tracking: false });
+  res.json(cycleContext(req.user.cycle, await MenstrualCycle.find({ userId: req.user._id }).lean()));
+});
+
+/** GET /api/me/menstrual/baseline — personal cycle baseline (median length, range, cycles used, confidence). */
+export const cycleBaseline = asyncHandler(async (req, res) => {
+  if (!req.user.cycle?.tracking) return res.json({ tracking: false });
+  res.json(cycleBaselineStats(await MenstrualCycle.find({ userId: req.user._id }).lean()));
 });

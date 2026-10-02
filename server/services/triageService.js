@@ -40,7 +40,17 @@ export async function runTriage(userId) {
     SymptomLog.find({ userId, ts: { $gte: new Date(Date.now() - 60 * DAY) } }).lean(),
     latestAnswers(userId),
   ]);
-  if (!cycles.length) return null;
+  if (!cycles.length) {
+    // No monitoring data yet — cycle-history questions can still reduce uncertainty
+    if (user?.cycle?.tracking) {
+      const mens0 = await analyzeMenstrual(userId, user);
+      const recent = await Question.find({ userId, status: 'answered', answeredAt: { $gte: new Date(Date.now() - 30 * 24 * 3600_000) } }).select('code').lean();
+      for (const q of cycleQuestions({ context: mens0.context, pattern: mens0.pattern, answered: new Set(recent.map((r) => r.code)) })) {
+        await ask(userId, undefined, q, q.code === 'cycle.period_started' ? 'missing' : 'endoSymptoms');
+      }
+    }
+    return null;
+  }
   const baseline = plainBaseline(baselineDoc);
 
   // Menstrual cycle context (only when the user enabled tracking): a learned, per-person pattern
