@@ -60,9 +60,11 @@ export function nextCyclePriority(result, modules) {
     p.reason = `Repeated night-time respiratory/SpO₂ deviations (${sleep.pattern.disturbedNights} nights) — next cycle prioritises respiration, oxygen and sleep data with faster night-time sampling.`;
   }
   if (endo?.active) {
-    p.metrics.push('hr', 'temp', 'steps');
-    p.checkinFocus.push('pain', 'cycle', 'sleep', 'fatigue');
-    const r = `Recurring pain pattern (${endo.pattern.painDays} days) — next cycle prioritises pain, cycle and activity check-ins.`;
+    p.metrics.push('hr', 'temp', 'steps', 'movement');
+    p.checkinFocus.push('pain', 'activity', 'sleep', 'cycle', 'fatigue');
+    const r = endo.pattern.cyclesMatched >= 2
+      ? `Recurring cycle-associated symptom pattern (${endo.pattern.cyclesMatched} cycles) — next cycle prioritises pain, activity, sleep, heart rate and temperature.`
+      : `Recurring pain pattern (${endo.pattern.painDays} days) — next cycle prioritises pain, cycle and activity check-ins.`;
     p.reason = sleep?.active ? `${p.reason} ${r}` : r;
   }
   p.metrics = [...new Set(p.metrics)];

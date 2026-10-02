@@ -12,14 +12,18 @@ import User from '../models/User.js';
 import { sample, DEFAULT_PERSONA } from '../sim/generator.js';
 import { cycleWindow, DAY_MS } from '../engines/cycleEngine.js';
 import { updateCycles } from './cycleService.js';
+import MenstrualCycle from '../models/MenstrualCycle.js';
+import MenstrualSymptom from '../models/MenstrualSymptom.js';
+import CycleBaseline from '../models/CycleBaseline.js';
+import { startPeriod } from './menstrualService.js';
 
 const STEP = 5 * 60_000; // 5-minute resolution
 const NIGHT_METRICS = ['hr', 'spo2', 'resp', 'movement', 'position'];
 
-function generate(userId, from, to, profile = 'normal', { abnormal = false, only = null } = {}) {
+function generate(userId, from, to, profile = 'normal', { abnormal = false, only = null, step = STEP, dayIndexOf = null } = {}) {
   const docs = [];
-  for (let t = from; t < to; t += STEP) {
-    const s = sample(new Date(t), DEFAULT_PERSONA, profile, { intervalSec: 300, abnormal });
+  for (let t = from; t < to; t += step) {
+    const s = sample(new Date(t), DEFAULT_PERSONA, profile, { intervalSec: step / 1000, abnormal, dayIndex: dayIndexOf ? dayIndexOf(t) : 0 });
     for (const r of s.readings) {
       if (only && !only.includes(r.metric)) continue;
       docs.push({ userId, metric: r.metric, value: r.value, ts: new Date(t), source: 'measured', confidence: r.quality, deviceId: 'HS-DEMO' });
@@ -51,8 +55,8 @@ const nightOf = (dayStart) => [dayStart.getTime(), dayStart.getTime() + 7 * 3600
 export const SCENARIOS = {
   /** Start over: remove this user's monitoring data. */
   async reset(userId) {
-    await Promise.all([Reading, Cycle, Baseline, Question, TriageEvent, TimelineEvent, SymptomLog].map((M) => M.deleteMany({ userId })));
-    await User.updateOne({ _id: userId }, { $set: { device: { packets: 0 }, deviceId: '', 'cycle.tracking': false }, $unset: { 'cycle.lastPeriodStart': '' } });
+    await Promise.all([Reading, Cycle, Baseline, Question, TriageEvent, TimelineEvent, SymptomLog, MenstrualCycle, MenstrualSymptom, CycleBaseline].map((M) => M.deleteMany({ userId })));
+    await User.updateOne({ _id: userId }, { $set: { device: { packets: 0 }, deviceId: '', 'cycle.tracking': false }, $unset: { 'cycle.lastPeriodStart': '', 'cycle.setupAt': '' } });
     return 'All monitoring data for this account was cleared.';
   },
 
@@ -102,6 +106,57 @@ export const SCENARIOS = {
     return 'Pain/cramp and fatigue reports were added for the last 3 days, linked to the menstrual cycle.';
   },
 
+  /**
+   * Menstrual cycle tracking: three 28-day cycles where cycle days 1–3 repeatedly bring strong pain, fatigue,
+   * reduced activity and a modest HR rise. Shows that cycle data changes how everything else is interpreted.
+   */
+  async menstrual(userId) {
+    await SCENARIOS.reset(userId);
+    const today = cycleWindow(new Date()).start.getTime();
+    const starts = [today - 57 * DAY_MS, today - 29 * DAY_MS, today - 1 * DAY_MS]; // current period: day 2 today
+    const first = starts[0];
+    const dayIndexOf = (t) => Math.floor((t - first) / DAY_MS); // generator 'endo' flare = days 0–2 of every 28
+
+    await User.updateOne({ _id: userId }, { $set: {
+      'cycle.tracking': true, 'cycle.avgLengthDays': 28, 'cycle.lengthUnknown': false, 'cycle.typicalPeriodLength': 5,
+      'cycle.regularity': 'regular', 'cycle.setupAt': new Date(first),
+    } });
+    // ~2 months of sensor data: 30-min resolution for history, 5-min for the last 4 days
+    await insert(generate(userId, first, today - 4 * DAY_MS, 'endo', { abnormal: true, step: 60 * 60_000, dayIndexOf }));
+    await insert(generate(userId, today - 4 * DAY_MS, Date.now(), 'endo', { abnormal: true, dayIndexOf }));
+    await TimelineEvent.create({ userId, ts: new Date(first), kind: 'device', title: 'Monitoring started', detail: 'HealthSense Watch (demo) connected; menstrual cycle tracking enabled.' });
+
+    // Periods (sequential: each start closes the previous cycle), then all symptoms in one batch
+    const symptomDocs = [];
+    const events = [];
+    for (const [i, s] of starts.entries()) {
+      const cyc = await startPeriod(userId, new Date(s));
+      if (i < 2) await MenstrualCycle.updateOne({ _id: cyc._id }, { $set: { periodEndDate: new Date(s + 4 * DAY_MS), periodLength: 5 } });
+      for (let d = 0; d < 3; d += 1) {
+        const ts = new Date(s + d * DAY_MS + 14 * 3600_000);
+        if (ts > new Date()) break;
+        const add = (symptom, severity, extra = {}) => symptomDocs.push({ userId, cycleId: cyc._id, ts, symptom, severity, source: 'user_reported', confidence: 1, ...extra });
+        add('pain', d === 1 ? 8 : 7);
+        add('cramps', 7);
+        add('fatigue', 6 + (d % 2));
+        events.push({ userId, ts, kind: 'cycle', title: `Pain ${d === 1 ? 8 : 7}/10`, detail: `Cycle day ${d + 1}. Cramps 7/10, fatigue ${6 + (d % 2)}/10.` });
+        if (d === 1) {
+          add('activity_impact', undefined, { activityImpact: 'significant' });
+          events.push({ userId, ts, kind: 'cycle', title: 'Activity impact: significant', detail: `Cycle day ${d + 1}.` });
+        }
+        if (d === 0) {
+          symptomDocs.push({ userId, cycleId: cyc._id, ts: new Date(ts.getTime() - 8 * 3600_000), symptom: 'sleep_disturbance', severity: 5, source: 'user_reported', confidence: 1 });
+          events.push({ userId, ts: new Date(ts.getTime() - 8 * 3600_000), kind: 'cycle', title: 'Sleep disturbance recorded', detail: 'Cycle day 1.' });
+        }
+      }
+    }
+    await MenstrualSymptom.insertMany(symptomDocs);
+    await TimelineEvent.insertMany(events);
+    await markDevice(userId, true);
+    await updateCycles(userId, { full: true });
+    return 'Three menstrual cycles generated (with sensor data). Each showed strong pain, fatigue and reduced activity on cycle days 1–3 — the system learns this personal pattern and adapts questions and monitoring.';
+  },
+
   /** Watch not worn last night: SpO2, breathing and movement missing; no reported sleep. */
   async missing(userId) {
     if (!(await Reading.exists({ userId }))) await SCENARIOS.normal(userId);
@@ -123,6 +178,7 @@ export async function demoStatus(userId) {
     Question.countDocuments({ userId, status: 'open' }),
     Cycle.findOne({ userId }).sort({ start: -1 }).select('assessment nextPriority index missing').lean(),
   ]);
+  const mens = current?.assessment?.menstrual;
   return {
     readings,
     cycles,
@@ -131,5 +187,6 @@ export async function demoStatus(userId) {
     triage: current?.assessment?.result ? { level: current.assessment.result.level, confidence: current.assessment.result.confidence } : null,
     focus: current?.nextPriority?.metrics || [],
     missing: (current?.missing || []).map((m) => `${m.field}:${m.resolution}`),
+    cycle: mens ? { day: mens.cycleDay, pattern: !!mens.pattern } : null,
   };
 }

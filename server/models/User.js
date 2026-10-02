@@ -20,10 +20,15 @@ const userSchema = new mongoose.Schema(
       weightKg: Number,
     },
     medicalHistory: [historySchema],
+    // Menstrual cycle tracking (optional, sensitive). Detailed cycles live in MenstrualCycle.
     cycle: {
       tracking: { type: Boolean, default: false },
       lastPeriodStart: Date,
       avgLengthDays: { type: Number, default: 28 },
+      lengthUnknown: { type: Boolean, default: false },
+      typicalPeriodLength: Number,
+      regularity: { type: String, enum: ['regular', 'somewhat_irregular', 'very_irregular', 'unsure', null], default: null },
+      setupAt: Date,
     },
     // Monitoring ranges configured by the user (Settings page)
     ranges: {

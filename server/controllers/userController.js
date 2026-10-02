@@ -1,7 +1,8 @@
 import User from '../models/User.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
-const EDITABLE = ['name', 'profile', 'medicalHistory', 'cycle', 'ranges', 'deviceId'];
+// Cycle tracking settings are managed separately via /api/me/cycle/settings (sensitive data)
+const EDITABLE = ['name', 'profile', 'medicalHistory', 'ranges', 'deviceId'];
 
 export const getMe = asyncHandler(async (req, res) => {
   res.json({ user: req.user.toPublic() });

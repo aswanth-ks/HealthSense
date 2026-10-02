@@ -18,7 +18,7 @@ export const SLOT = { sleep: 7 * 3600_000, steps: 20 * 3600_000 };
 const baselinePlain = (b) => (b ? { established: b.established, metrics: b.metrics instanceof Map ? Object.fromEntries(b.metrics) : b.metrics || {} } : { established: false, metrics: {} });
 
 /** Create a question unless an equivalent one is already open (or was answered for this cycle). */
-async function ask(userId, cycleId, q, module) {
+export async function ask(userId, cycleId, q, module) {
   const dup = await Question.findOne({
     userId, code: q.code,
     $or: [{ status: 'open' }, { cycleId, status: { $in: ['answered', 'dismissed'] } }],

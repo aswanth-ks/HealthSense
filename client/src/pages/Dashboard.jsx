@@ -16,12 +16,15 @@ import HeartRateChart from '../components/charts/HeartRateChart.jsx';
 import FocusCard from '../components/dashboard/FocusCard.jsx';
 import RecentEvents from '../components/dashboard/RecentEvents.jsx';
 import WearableCard from '../components/dashboard/WearableCard.jsx';
+import CycleHealthCard from '../components/cycle/CycleHealthCard.jsx';
+import useCycle from '../hooks/useCycle.js';
 import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
 
 // Overview reads top → bottom as: how am I? → what do you need from me? → my numbers → what's being watched → what happened.
 export default function Dashboard() {
   const data = useOverview();
   const tri = useTriage();
+  const { data: cycle } = useCycle();
   const { user } = useAuth();
   const { openCheckin } = useInput();
   const { questions, reload } = useQuestions('open');
@@ -95,6 +98,9 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      {/* Cycle context (only when the user enabled menstrual cycle tracking) */}
+      {cycle?.tracking && <CycleHealthCard cycle={cycle} />}
 
       {/* 3. My numbers, compared with my own baseline */}
       <section>

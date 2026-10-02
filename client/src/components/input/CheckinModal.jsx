@@ -4,6 +4,7 @@ import Modal from '../common/Modal.jsx';
 import Toggle from '../common/Toggle.jsx';
 import { Chips, Slider, Section, inputCls } from './fields.jsx';
 import { submitCheckin } from '../../services/inputService.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const LOCATIONS = ['Lower abdomen', 'Pelvis', 'Lower back', 'Head', 'Chest', 'Other'];
 const QUALITY = [{ label: 'Very poor', value: 1 }, { label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }, { label: 'Great', value: 5 }];
@@ -13,6 +14,7 @@ const EMPTY = { sleepHours: '', sleepQuality: null, fatigue: null, pain: 0, pain
 
 // Daily check-in: everything the sensors can't measure (spec §27-A symptom logging, §27-F "Reported").
 export default function CheckinModal({ open, onClose, prefill, onSaved }) {
+  const { user } = useAuth();
   const [form, setForm] = useState(EMPTY);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
@@ -106,18 +108,20 @@ export default function CheckinModal({ open, onClose, prefill, onSaved }) {
             <Chips options={MOOD} value={form.mood} onChange={set('mood')} />
           </Section>
 
-          <Section label="Menstrual cycle" hint="Optional">
-            <label className="flex items-center justify-between gap-3 text-sm text-ink-soft">
-              I am on my period
-              <Toggle checked={form.period} onChange={set('period')} label="On period" />
-            </label>
-            {form.period && (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-ink-mute">Day</span>
-                <input type="number" min="1" max="15" className={`${inputCls} w-24`} value={form.cycleDay} onChange={(e) => set('cycleDay')(e.target.value)} />
-              </div>
-            )}
-          </Section>
+          {user?.cycle?.tracking && (
+            <Section label="Menstrual cycle" hint="Optional">
+              <label className="flex items-center justify-between gap-3 text-sm text-ink-soft">
+                I am on my period
+                <Toggle checked={form.period} onChange={set('period')} label="On period" />
+              </label>
+              {form.period && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-ink-mute">Day</span>
+                  <input type="number" min="1" max="15" className={`${inputCls} w-24`} value={form.cycleDay} onChange={(e) => set('cycleDay')(e.target.value)} />
+                </div>
+              )}
+            </Section>
+          )}
 
           <Section label="Anything else?" hint="Optional">
             <textarea rows={2} className={inputCls} placeholder="Notes for your records or your clinician" value={form.notes} onChange={(e) => set('notes')(e.target.value)} />

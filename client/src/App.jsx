@@ -14,6 +14,7 @@ import Settings from './pages/Settings.jsx';
 import Timeline from './pages/Timeline.jsx';
 import Profile from './pages/Profile.jsx';
 import Demo from './pages/Demo.jsx';
+import CycleHealth from './pages/CycleHealth.jsx';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/demo" element={<Demo />} />
+          <Route path="/cycle" element={<CycleHealth />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>

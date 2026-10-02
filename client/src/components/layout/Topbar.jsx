@@ -8,7 +8,7 @@ import SymptomLogButton from '../input/SymptomLogButton.jsx';
 const TITLES = {
   '/': 'Overview', '/live': 'Live Monitoring', '/trends': 'Health Trends', '/history': 'History',
   '/insights': 'AI Insights', '/timeline': 'Timeline', '/alerts': 'Alerts & Questions', '/watch': 'My Watch',
-  '/settings': 'Settings', '/profile': 'Profile', '/demo': 'Demo Mode',
+  '/settings': 'Settings', '/profile': 'Profile', '/demo': 'Demo Mode', '/cycle': 'Cycle & Health',
 };
 
 export default function Topbar() {

@@ -7,7 +7,7 @@ const TABS = [
   { to: '/live', label: 'Monitoring', icon: Activity },
   { to: '/insights', label: 'Insights', icon: Brain },
   { to: '/timeline', label: 'Timeline', icon: GitCommitVertical },
-  { to: '/profile', label: 'Profile', icon: UserRound, also: ['/trends', '/history', '/alerts', '/watch', '/settings', '/demo'] },
+  { to: '/profile', label: 'Profile', icon: UserRound, also: ['/trends', '/history', '/alerts', '/watch', '/settings', '/demo', '/cycle'] },
 ];
 
 // Bottom tab bar for phones (hidden on large screens, where the sidebar is used).

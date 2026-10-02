@@ -4,6 +4,7 @@ import PageHeader from '../components/common/PageHeader.jsx';
 import Card from '../components/common/Card.jsx';
 import Toggle from '../components/common/Toggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import HealthTrackingCard from '../components/cycle/HealthTrackingCard.jsx';
 import api from '../services/api.js';
 
 const input = 'w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-canvas disabled:text-ink-mute';
@@ -62,7 +63,6 @@ export default function Settings() {
         name: form.name.trim(),
         profile: { dob: form.dob || undefined, sex: form.sex, heightCm: num(form.heightCm), weightKg: num(form.weightKg) },
         medicalHistory: form.history.filter((h) => h.condition.trim()),
-        cycle: { tracking: form.tracking, lastPeriodStart: form.tracking && form.lastPeriodStart ? form.lastPeriodStart : undefined, avgLengthDays: num(form.avgLengthDays) || 28 },
         ranges: Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Number(v)])),
       });
       updateUser(data.user);
@@ -138,18 +138,7 @@ export default function Settings() {
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card eyebrow="Symptom module" title="Menstrual cycle tracking">
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>Track my cycle<span className="block text-xs text-ink-mute">Lets recurring pain be linked to your cycle.</span></span>
-            <Toggle checked={form.tracking} onChange={set('tracking')} label="Track my cycle" />
-          </label>
-          {form.tracking && (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <Field label="Last period started"><input type="date" className={input} value={form.lastPeriodStart} onChange={set('lastPeriodStart')} /></Field>
-              <Field label="Average cycle length (days)"><input type="number" min="18" max="45" className={input} value={form.avgLengthDays} onChange={set('avgLengthDays')} /></Field>
-            </div>
-          )}
-        </Card>
+        <HealthTrackingCard />
 
         <Card eyebrow="Monitoring" title="Configured ranges">
           <div className="grid gap-4 sm:grid-cols-2">

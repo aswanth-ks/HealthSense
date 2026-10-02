@@ -45,13 +45,8 @@ export function patternQuestions({ cycles, symptoms, answered, user }) {
     symptoms.filter((s) => ['pain', 'cramp'].includes(s.type) && s.severity >= 6).map((s) => new Date(s.ts).toDateString())
   );
   if (painDays.size >= 2) {
-    if (!user?.cycle?.tracking && !answered.has('endo.period')) {
-      out.push({
-        code: 'endo.period', kind: 'yesno',
-        text: 'Are you currently on your period, or did it start in the last few days?',
-        reason: `You reported strong pain or cramps on ${painDays.size} days. Linking them to your cycle shows whether the pain follows a monthly pattern.`,
-      });
-    } else if (!answered.has('endo.activity_impact')) {
+    // Menstrual questions are only asked when the user opted in to cycle tracking (see cycleQuestions)
+    if (!answered.has('endo.activity_impact')) {
       out.push({
         code: 'endo.activity_impact', kind: 'yesno',
         text: 'Did the pain stop you from doing your usual daily activities?',
@@ -60,5 +55,48 @@ export function patternQuestions({ cycles, symptoms, answered, user }) {
     }
   }
 
+  return out;
+}
+
+/**
+ * Cycle-context questions — only asked when they reduce meaningful uncertainty, one step at a time.
+ * context: cycleContext(); pattern: recurringPattern(); answered: Set of recently answered codes.
+ */
+export function cycleQuestions({ context, pattern, answered }) {
+  const out = [];
+  if (!context?.tracking || !context.known) return out;
+
+  // Missing data: the expected period hasn't been recorded
+  if (context.cycleDayRaw > context.length.days + 3 && !answered.has('cycle.period_started')) {
+    const expected = new Date(context.nextPeriod.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    out.push({
+      code: 'cycle.period_started', field: 'cycle', kind: 'yesno',
+      text: `Has your period started since ${expected}?`,
+      reason: `Your next period was estimated for ${expected} (${Math.round(context.nextPeriod.confidence * 100)}% confidence) but no start has been recorded. Cycle context for your other readings depends on it.`,
+    });
+  }
+
+  if (pattern?.detected) {
+    const basis = `${pattern.cyclesMatched} recent cycles show strong pain on cycle days 1–3`;
+    if (!answered.has('cycle.pain_duration')) {
+      out.push({
+        code: 'cycle.pain_duration', kind: 'choice', options: ['Less than a day', '1–2 days', '3 or more days', 'It varies'],
+        text: 'Your recent cycles show a recurring pain pattern. How long does the pain typically last?',
+        reason: `${basis}. Knowing the usual duration helps describe the pattern accurately.`,
+      });
+    } else if (!answered.has('endo.activity_impact')) {
+      out.push({
+        code: 'endo.activity_impact', kind: 'yesno',
+        text: 'Does the pain significantly affect your normal activities?',
+        reason: `Follow-up: ${basis}. Impact on daily life is part of the pattern a clinician would want to know.`,
+      });
+    } else if (!answered.has('cycle.pain_outside_period')) {
+      out.push({
+        code: 'cycle.pain_outside_period', kind: 'yesno',
+        text: 'Does the pain occur outside your menstrual period?',
+        reason: `Follow-up: ${basis}. Whether pain is limited to the period changes how the pattern is described.`,
+      });
+    }
+  }
   return out;
 }

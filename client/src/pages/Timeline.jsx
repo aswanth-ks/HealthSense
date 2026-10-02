@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GraduationCap, AlertTriangle, MessageCircleQuestion, MessageSquareReply, ShieldAlert, Target, ClipboardList, Watch, Info } from 'lucide-react';
+import { CalendarHeart, GraduationCap, AlertTriangle, MessageCircleQuestion, MessageSquareReply, ShieldAlert, Target, ClipboardList, Watch, Info } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
 import Segmented from '../components/common/Segmented.jsx';
 import { getTimeline } from '../services/triageService.js';
@@ -16,10 +16,11 @@ const KIND = {
   priority: { icon: Target, cls: 'bg-indigo-50 text-indigo-600', label: 'Monitoring' },
   symptom: { icon: ClipboardList, cls: 'bg-blue-50 text-blue-600', label: 'Reported' },
   device: { icon: Watch, cls: 'bg-canvas text-ink-soft', label: 'Device' },
+  cycle: { icon: CalendarHeart, cls: 'bg-rose-50 text-rose-500', label: 'Cycle' },
   info: { icon: Info, cls: 'bg-canvas text-ink-soft', label: 'Info' },
 };
 
-const FILTERS = { All: null, 'Key events': ['baseline', 'deviation', 'triage', 'priority'], 'Questions & answers': ['question', 'answer', 'symptom'] };
+const FILTERS = { All: null, 'Key events': ['baseline', 'deviation', 'triage', 'priority', 'cycle'], 'Questions & answers': ['question', 'answer', 'symptom'], Cycle: ['cycle'] };
 const dayLabel = (d) => new Date(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const time = (d) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 

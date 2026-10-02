@@ -10,7 +10,11 @@ import { assessSleepRisk } from '../modules/sleepRisk.js';
 import { assessEndoSymptoms } from '../modules/endoSymptoms.js';
 import { triage, nextCyclePriority, levelChange } from '../engines/triageEngine.js';
 import { interpret } from '../engines/baselineEngine.js';
-import { APNEA_EVENT_NIGHT } from '../engines/questionEngine.js';
+import { APNEA_EVENT_NIGHT, cycleQuestions } from '../engines/questionEngine.js';
+import { analyzeMenstrual, cycleSymptoms } from './menstrualService.js';
+import { dayContext } from '../engines/menstrualEngine.js';
+import MenstrualCycle from '../models/MenstrualCycle.js';
+import { ask } from './loopService.js';
 import { emitToUser } from '../utils/realtime.js';
 
 const DAY = 24 * 3600_000;
@@ -39,9 +43,14 @@ export async function runTriage(userId) {
   if (!cycles.length) return null;
   const baseline = plainBaseline(baselineDoc);
 
+  // Menstrual cycle context (only when the user enabled tracking): a learned, per-person pattern
+  const mens = await analyzeMenstrual(userId, user);
+  const mensCycles = mens ? await MenstrualCycle.find({ userId }).select('startDate').lean() : [];
+  const endoSymptoms = mens ? await cycleSymptoms(userId) : symptoms;
+
   const modules = [
     assessSleepRisk({ cycles, symptoms, answers, baseline }),
-    assessEndoSymptoms({ symptoms, cycles, user, answers }),
+    assessEndoSymptoms({ symptoms: endoSymptoms, cycles, user, answers, cyclePattern: mens?.pattern }),
   ];
 
   // General deviations: yesterday's averages vs the personal baseline
@@ -50,7 +59,9 @@ export async function runTriage(userId) {
   if (lastClosed && baseline.established) {
     for (const m of ['hr', 'spo2', 'temp', 'resp']) {
       const v = lastClosed.aggregates?.[m]?.mean;
-      const stat = baseline.metrics[m];
+      // Cycle-aware: judge a day in its menstrual-cycle context when a cycle baseline exists for it
+      const cb = mens?.baselines?.find((b) => b.metric === m && b.cycleContext === dayContext(lastClosed.start, mensCycles)?.context);
+      const stat = cb ? { mean: cb.baselineValue, sd: Math.max((cb.range.hi - cb.range.lo) / 3, 0.01) } : baseline.metrics[m];
       if (v == null || !stat) continue;
       const i = interpret(m, +v.toFixed(1), stat, VITAL_LABEL[m]);
       if (i.band === 'above' || i.band === 'below') deviations.push({ text: `${VITAL_LABEL[m]} ${i.band} your personal baseline (${v.toFixed(1)} vs ${stat.mean})`, weight: 8, metric: m });
@@ -59,6 +70,20 @@ export async function runTriage(userId) {
 
   const result = triage(modules, deviations);
   const priority = nextCyclePriority(result, modules);
+  // Record explicitly what in this cycle shaped the next one (closed loop)
+  priority.influencedBy = [
+    ...(modules[0].active ? [`Night-time breathing/SpO₂ pattern across ${modules[0].pattern.disturbedNights} nights`] : []),
+    ...(mens?.pattern?.detected ? [`Cycle-associated symptom pattern across ${mens.pattern.cyclesMatched} menstrual cycles (days 1–3)`] : []),
+    ...(!mens?.pattern?.detected && modules[1].active ? [`Strong pain reported on ${modules[1].pattern.painDays} days`] : []),
+  ];
+
+  // Adaptive questions from cycle context (one step at a time, only when they reduce uncertainty)
+  if (mens) {
+    const recent = await Question.find({ userId, status: 'answered', answeredAt: { $gte: new Date(Date.now() - 30 * 24 * 3600_000) } }).select('code').lean();
+    for (const q of cycleQuestions({ context: mens.context, pattern: mens.pattern, answered: new Set(recent.map((r) => r.code)) })) {
+      await ask(userId, cycles[0]._id, q, q.code === 'cycle.period_started' ? 'missing' : 'endoSymptoms');
+    }
+  }
   const [current, previous] = cycles;
 
   // ---- Closed loop ----
@@ -67,7 +92,14 @@ export async function runTriage(userId) {
     triage: { level: result.level, confidence: result.confidence },
     findings: modules.flatMap((m) => m.evidence.map((e) => ({ code: `${m.module}.${e.code}`, text: e.text, severity: e.weight }))),
     nextPriority: { ...priority, fromCycle: current.index, at: new Date() },
-    assessment: { result, modules, deviations },
+    assessment: {
+      result, modules, deviations,
+      menstrual: mens ? {
+        cycleDay: mens.context.cycleDay ?? null,
+        period: mens.context.period?.status ?? null,
+        pattern: mens.pattern.detected ? { summary: mens.pattern.summary, cyclesMatched: mens.pattern.cyclesMatched } : null,
+      } : null,
+    },
   };
   if (!current.appliedPriority && previous?.nextPriority) update.appliedPriority = previous.nextPriority;
   // Every cycle keeps its own observations (shown as "what happened" in the closed-loop view)

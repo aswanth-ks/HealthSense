@@ -64,9 +64,10 @@ test('one disturbed night is not enough to ask', () => {
   assert.equal(q.length, 0);
 });
 
-test('strong pain on 2+ days → cycle question', () => {
+test('strong pain on 2+ days → activity-impact question; no menstrual question when cycle tracking is off', () => {
   const d = (n) => new Date(Date.now() - n * 86400000);
   const symptoms = [{ type: 'cramp', severity: 7, ts: d(0) }, { type: 'pain', severity: 8, ts: d(1) }];
   const q = patternQuestions({ cycles: [], symptoms, answered: new Set(), user: { cycle: { tracking: false } } });
-  assert.equal(q[0].code, 'endo.period');
+  assert.equal(q[0].code, 'endo.activity_impact');
+  assert.ok(!q.some((x) => x.code === 'endo.period'));
 });

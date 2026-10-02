@@ -2,6 +2,7 @@ import Reading from '../models/Reading.js';
 import Cycle from '../models/Cycle.js';
 import Baseline from '../models/Baseline.js';
 import { interpret } from '../engines/baselineEngine.js';
+import { todaysCycleBaselines } from '../services/menstrualService.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { deviceStatus } from './deviceController.js';
 
@@ -71,8 +72,18 @@ export const getOverview = asyncHandler(async (req, res) => {
   const baseDoc = await Baseline.findOne({ userId }).lean();
   const baseMetrics = baseDoc?.metrics instanceof Map ? Object.fromEntries(baseDoc.metrics) : baseDoc?.metrics || {};
   const SHORT = { typical: 'Typical for you', slightly_above: 'Slightly above your usual', above: 'Above your usual range', slightly_below: 'Slightly below your usual', below: 'Below your usual range' };
+  // Cycle-aware: on cycle days 1–3 (or outside the period) compare with that context's learned baseline
+  const cycleBase = await todaysCycleBaselines(userId, req.user);
+  const CTX = { period_days_1_3: 'on cycle days 1–3', outside_period: 'outside your period' };
   const personal = (m, v) => {
-    if (!baseDoc?.established || v == null || !baseMetrics[m]) return null;
+    if (v == null) return null;
+    const cb = cycleBase?.metrics?.[m];
+    if (cb) {
+      const sd = Math.max((cb.range.hi - cb.range.lo) / 3, 0.0001);
+      const i = interpret(m, v, { mean: cb.baselineValue, sd });
+      return { band: i.band, text: `${SHORT[i.band]} ${CTX[cycleBase.context]}`, cycleContext: cycleBase.context, confidence: cb.confidence };
+    }
+    if (!baseDoc?.established || !baseMetrics[m]) return null;
     const i = interpret(m, v, baseMetrics[m]);
     return { band: i.band, text: SHORT[i.band] };
   };

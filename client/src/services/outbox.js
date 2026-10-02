@@ -19,7 +19,7 @@ const write = (items) => {
 export const getOutbox = () => read();
 export const onOutbox = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 
-const LABEL = { checkin: 'Daily check-in', symptom: 'Symptom', answer: 'Question answer' };
+const LABEL = { checkin: 'Daily check-in', symptom: 'Symptom', answer: 'Question answer', cycle: 'Cycle entry' };
 export const describe = (item) => LABEL[item.kind] || 'Entry';
 
 /** Queue a request for later. `body` must already contain the time the patient entered it. */

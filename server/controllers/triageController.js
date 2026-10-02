@@ -4,7 +4,7 @@ import TimelineEvent from '../models/TimelineEvent.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { DISCLAIMER } from '../engines/triageEngine.js';
 
-const short = (p) => (p ? { metrics: p.metrics || [], nightBoost: !!p.nightBoost, sampleIntervalSec: p.sampleIntervalSec, checkinFocus: p.checkinFocus || [], reason: p.reason, fromCycle: p.fromCycle } : null);
+const short = (p) => (p ? { metrics: p.metrics || [], nightBoost: !!p.nightBoost, sampleIntervalSec: p.sampleIntervalSec, checkinFocus: p.checkinFocus || [], reason: p.reason, fromCycle: p.fromCycle, influencedBy: p.influencedBy || [] } : null);
 
 /** GET /api/me/triage — current level, explanation, modules and the closed-loop view. */
 export const getTriage = asyncHandler(async (req, res) => {

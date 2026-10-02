@@ -12,13 +12,14 @@ const dayKey = (d) => new Date(d).toDateString();
  * user: { cycle: { tracking, lastPeriodStart, avgLengthDays } }
  * answers: { [code]: answer }
  */
-export function assessEndoSymptoms({ symptoms = [], cycles = [], user = {}, answers = {} }) {
+export function assessEndoSymptoms({ symptoms = [], cycles = [], user = {}, answers = {}, cyclePattern = null }) {
   const strong = symptoms.filter((s) => ['pain', 'cramp'].includes(s.type) && s.severity >= 6);
   const painDays = [...new Set(strong.map((s) => dayKey(s.ts)))];
   const evidence = [];
   let score = 0;
 
-  if (painDays.length) {
+  const learned = !!cyclePattern?.detected;
+  if (painDays.length && !learned) {
     const maxSev = Math.max(...strong.map((s) => s.severity));
     const w = painDays.length >= 5 ? 26 : painDays.length >= 3 ? 18 : painDays.length === 2 ? 10 : 4;
     score += w;
@@ -27,7 +28,7 @@ export function assessEndoSymptoms({ symptoms = [], cycles = [], user = {}, answ
 
   // Recurrence around menstruation
   const c = user.cycle || {};
-  if (c.lastPeriodStart && painDays.length >= 2) {
+  if (c.lastPeriodStart && painDays.length >= 2 && !learned) {
     const len = c.avgLengthDays || 28;
     const phase = (d) => {
       const diff = Math.floor((new Date(d) - new Date(c.lastPeriodStart)) / DAY);
@@ -47,37 +48,53 @@ export function assessEndoSymptoms({ symptoms = [], cycles = [], user = {}, answ
   const avg = (arr, f) => { const v = arr.map(f).filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const stepsPain = avg(painCycles, (x) => x.activity?.steps);
   const stepsOther = avg(otherCycles, (x) => x.activity?.steps);
-  if (stepsPain != null && stepsOther && stepsPain < stepsOther * 0.75) {
+  if (!learned && stepsPain != null && stepsOther && stepsPain < stepsOther * 0.75) {
     score += 8;
     evidence.push({ code: 'activity_drop', text: `Activity ${Math.round((1 - stepsPain / stepsOther) * 100)}% lower on pain days`, weight: 8 });
   }
   const sleepPain = avg(painCycles, (x) => x.sleep?.hours);
   const sleepOther = avg(otherCycles, (x) => x.sleep?.hours);
-  if (sleepPain != null && sleepOther && sleepPain < sleepOther - 0.7) {
+  if (!learned && sleepPain != null && sleepOther && sleepPain < sleepOther - 0.7) {
     score += 6;
     evidence.push({ code: 'sleep_drop', text: `Sleep ${(sleepOther - sleepPain).toFixed(1)} h shorter on pain days`, weight: 6 });
   }
 
   const fatigue = symptoms.filter((s) => s.type === 'fatigue' && s.severity >= 6);
-  if (fatigue.length >= 2 && painDays.length) {
+  if (!learned && fatigue.length >= 2 && painDays.length) {
     score += 6;
     evidence.push({ code: 'fatigue', text: `Fatigue reported on ${fatigue.length} days`, weight: 6 });
   }
+  // Learned, per-person recurring pattern across menstrual cycles (cycle tracking enabled)
+  if (cyclePattern?.detected) {
+    const w = 16 + 6 * Math.max(0, cyclePattern.cyclesMatched - 2);
+    score += w;
+    evidence.unshift({ code: 'cycle_pattern', text: cyclePattern.summary, weight: w });
+  }
+  const duration = answers['cycle.pain_duration'];
+  if (duration === '3 or more days') {
+    score += 6;
+    evidence.push({ code: 'duration', text: 'Pain typically lasts 3 or more days', weight: 6 });
+  }
+  if (yes(answers['cycle.pain_outside_period'])) {
+    score += 6;
+    evidence.push({ code: 'outside_period', text: 'Pain also occurs outside the menstrual period', weight: 6 });
+  }
+
   if (yes(answers['endo.activity_impact'])) {
     score += 10;
     evidence.push({ code: 'impact', text: 'Pain stopped usual daily activities', weight: 10 });
   }
 
   // Confidence: reported symptoms are high-quality but sparse; more days + cycle info → more confidence
-  const confidence = +Math.min(0.95, 0.35 + 0.08 * painDays.length + (c.lastPeriodStart ? 0.15 : 0) + (painCycles.length ? 0.1 : 0)).toFixed(2);
+  const confidence = +Math.min(0.95, 0.35 + 0.08 * painDays.length + (c.lastPeriodStart ? 0.15 : 0) + (painCycles.length ? 0.1 : 0) + (cyclePattern?.detected ? 0.1 * cyclePattern.cyclesMatched : 0)).toFixed(2);
 
   return {
     module: 'endoSymptoms',
-    title: 'Symptom pattern (endometriosis-associated)',
+    title: 'Cycle-associated symptom pattern',
     score: Math.min(100, score),
-    confidence: painDays.length ? confidence : 0,
+    confidence: painDays.length || cyclePattern?.detected ? confidence : 0,
     evidence,
-    pattern: { painDays: painDays.length, cycleTracking: !!c.lastPeriodStart },
-    active: painDays.length >= 2,
+    pattern: { painDays: painDays.length, cycleTracking: !!c.lastPeriodStart, cyclesMatched: cyclePattern?.cyclesMatched || 0 },
+    active: painDays.length >= 2 || !!cyclePattern?.detected,
   };
 }

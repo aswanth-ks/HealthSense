@@ -10,6 +10,7 @@ import { ACTIVITY_STEPS } from '../engines/missingDataEngine.js';
 import { updateCycles } from '../services/cycleService.js';
 import { SLOT } from '../services/loopService.js';
 import { emitToUser } from '../utils/realtime.js';
+import { startPeriod } from '../services/menstrualService.js';
 
 const SYMPTOM_TYPES = ['pain', 'cramp', 'fatigue', 'wake_sudden', 'headache', 'mood', 'bloating', 'nausea', 'dizziness', 'breathless', 'other'];
 const clampNum = (v, lo, hi) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Math.min(hi, Math.max(lo, Number(v))));
@@ -70,15 +71,10 @@ export const checkin = asyncHandler(async (req, res) => {
   if (fatigue != null) saved.push(`fatigue ${fatigue}/10`);
   if (pain) saved.push(`pain ${pain}/10`);
 
-  if (b.period) {
-    const c = req.user.cycle || {};
-    const last = c.lastPeriodStart ? new Date(c.lastPeriodStart) : null;
-    const day = clampNum(b.cycleDay, 1, 60) || 1;
-    const start = new Date(when.getTime() - (day - 1) * 24 * 3600_000);
-    if (!last || Math.abs(start - last) > 10 * 24 * 3600_000) {
-      req.user.cycle = { ...c, tracking: true, lastPeriodStart: start };
-      await req.user.save();
-    }
+  if (b.period && req.user.cycle?.tracking) {
+    // Recorded as a menstrual-cycle event (nothing is stored when cycle tracking is disabled)
+    const day = clampNum(b.cycleDay, 1, 15) || 1;
+    await startPeriod(userId, new Date(when.getTime() - (day - 1) * 24 * 3600_000));
     saved.push(`period day ${day}`);
   }
 
@@ -137,10 +133,15 @@ async function applyAnswer(userId, q, answer) {
     case 'sleep.snoring':
       if (yes) await SymptomLog.create({ userId, type: 'other', severity: 5, notes: 'Reported loud snoring / witnessed pauses', source: 'reported' });
       break;
+    case 'cycle.period_started':
+      if (yes) await startPeriod(userId, new Date());
+      break;
     case 'endo.period':
+      // Legacy question: only recorded if the user has cycle tracking enabled
       if (yes) {
         const { default: User } = await import('../models/User.js');
-        await User.updateOne({ _id: userId }, { $set: { 'cycle.tracking': true, 'cycle.lastPeriodStart': new Date() } });
+        const u = await User.findById(userId).select('cycle').lean();
+        if (u?.cycle?.tracking) await startPeriod(userId, new Date());
       }
       break;
     default:

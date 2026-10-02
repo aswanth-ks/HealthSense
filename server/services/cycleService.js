@@ -70,21 +70,28 @@ async function doUpdateCycles(userId, { full = false } = {}) {
   const closed = new Map(existing.filter((c) => c.status === 'closed').map((c) => [c.start.getTime(), c]));
 
   let index = 1;
+  // Decide which days need (re)computing, then process them in parallel batches (each day is independent).
+  const todo = [];
   for (let t = firstStart.getTime(); t <= todayStart.getTime(); t += DAY_MS, index += 1) {
-    const start = new Date(t);
-    const end = new Date(t + DAY_MS);
     const isToday = t === todayStart.getTime();
     const done = closed.get(t);
+    todo.push({ t, index, isToday, done });
+  }
+  const needsWork = async ({ t, isToday, done }) => {
     // A closed cycle is only recomputed if readings for its window arrived after it was computed
     // (e.g. the watch uploads buffered data after a Wi-Fi drop). ObjectIds encode insert time.
-    if (!isToday && done && !full) {
-      const late = await Reading.exists({
-        userId, ts: { $gte: start, $lt: end },
-        _id: { $gt: mongoose.Types.ObjectId.createFromTime(Math.floor(new Date(done.updatedAt).getTime() / 1000)) },
-      });
-      if (!late) continue;
-    }
-    await upsertCycle(userId, start, end, index, isToday ? 'open' : 'closed');
+    if (isToday || !done || full) return true;
+    return !!(await Reading.exists({
+      userId, ts: { $gte: new Date(t), $lt: new Date(t + DAY_MS) },
+      _id: { $gt: mongoose.Types.ObjectId.createFromTime(Math.floor(new Date(done.updatedAt).getTime() / 1000)) },
+    }));
+  };
+  const BATCH = 8;
+  for (let i = 0; i < todo.length; i += BATCH) {
+    await Promise.all(todo.slice(i, i + BATCH).map(async (d) => {
+      if (!(await needsWork(d))) return;
+      await upsertCycle(userId, new Date(d.t), new Date(d.t + DAY_MS), d.index, d.isToday ? 'open' : 'closed');
+    }));
   }
 
   const baseline = await recomputeBaseline(userId);

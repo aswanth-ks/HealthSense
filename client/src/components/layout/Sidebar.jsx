@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutGrid, Activity, BarChart3, Clock, Brain, AlertCircle, Watch, Settings, HeartPulse, MoreHorizontal, LogOut, GitCommitVertical, FlaskConical, Download,
+  LayoutGrid, Activity, BarChart3, Clock, Brain, AlertCircle, Watch, Settings, HeartPulse, MoreHorizontal, LogOut, GitCommitVertical, FlaskConical, Download, CalendarHeart,
 } from 'lucide-react';
 import { useAuth, initials } from '../../context/AuthContext.jsx';
 import { usePwa } from '../../context/PwaContext.jsx';
@@ -48,6 +48,11 @@ export default function Sidebar() {
             )}
           </NavLink>
         ))}
+        {user?.cycle?.tracking && (
+          <NavLink to="/cycle" className={link}>
+            <CalendarHeart size={18} strokeWidth={1.6} /> <span className="flex-1">Cycle &amp; Health</span>
+          </NavLink>
+        )}
         <NavLink to="/demo" className={({ isActive }) => `mt-3 flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${isActive ? 'border-indigo-300 bg-indigo-50 font-medium text-indigo-800' : 'border-indigo-100 text-indigo-700 hover:bg-indigo-50'}`}>
           <FlaskConical size={18} strokeWidth={1.7} /> <span className="flex-1">Demo Mode</span>
         </NavLink>

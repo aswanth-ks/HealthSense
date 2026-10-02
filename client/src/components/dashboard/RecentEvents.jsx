@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, GraduationCap, AlertTriangle, MessageCircleQuestion, MessageSquareReply, ShieldAlert, Target, ClipboardList, Info } from 'lucide-react';
+import { CalendarHeart, ArrowRight, GraduationCap, AlertTriangle, MessageCircleQuestion, MessageSquareReply, ShieldAlert, Target, ClipboardList, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Card from '../common/Card.jsx';
 import { getTimeline } from '../../services/triageService.js';
@@ -8,7 +8,7 @@ import { useInput } from '../../context/InputContext.jsx';
 const ICON = {
   baseline: [GraduationCap, 'bg-brand-50 text-brand-600'], deviation: [AlertTriangle, 'bg-amber-50 text-amber-600'],
   question: [MessageCircleQuestion, 'bg-indigo-50 text-indigo-600'], answer: [MessageSquareReply, 'bg-blue-50 text-blue-600'],
-  triage: [ShieldAlert, 'bg-red-50 text-red-500'], priority: [Target, 'bg-indigo-50 text-indigo-600'], symptom: [ClipboardList, 'bg-blue-50 text-blue-600'],
+  triage: [ShieldAlert, 'bg-red-50 text-red-500'], cycle: [CalendarHeart, 'bg-rose-50 text-rose-500'], priority: [Target, 'bg-indigo-50 text-indigo-600'], symptom: [ClipboardList, 'bg-blue-50 text-blue-600'],
 };
 const when = (d) => new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 

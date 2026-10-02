@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
-  BarChart3, Clock, AlertCircle, Watch, Settings, FlaskConical, Download, LogOut, ChevronRight, ShieldCheck, Smartphone, Share, CheckCircle2,
+  BarChart3, Clock, AlertCircle, Watch, Settings, FlaskConical, Download, LogOut, ChevronRight, ShieldCheck, Smartphone, Share, CheckCircle2, CalendarHeart,
 } from 'lucide-react';
 import { useAuth, initials } from '../context/AuthContext.jsx';
 import { usePwa } from '../context/PwaContext.jsx';
@@ -48,6 +48,7 @@ export default function Profile() {
 
       <section className="card divide-y divide-line overflow-hidden">
         <Row to="/alerts" icon={AlertCircle} label="Alerts & Questions" hint="Questions the system needs answered" badge={questions?.length || 0} tint="bg-red-50 text-red-500" />
+        {user?.cycle?.tracking && <Row to="/cycle" icon={CalendarHeart} label="Cycle & Health" hint="Cycle context, patterns and cycle-aware baseline" tint="bg-rose-50 text-rose-500" />}
         <Row to="/trends" icon={BarChart3} label="Health Trends" hint="Your vitals against your personal baseline" tint="bg-brand-50 text-brand-600" />
         <Row to="/history" icon={Clock} label="History" hint="24-hour monitoring cycles and readings" tint="bg-blue-50 text-blue-600" />
         <Row to="/watch" icon={Watch} label="My Watch" hint="Device status and connection" tint="bg-amber-50 text-amber-600" />
