@@ -1,0 +1,10 @@
+{
+  "name": "healthsense",
+  "private": true,
+  "type": "module",
+  "description": "HealthSense — 24-Hour Closed-Loop Triage System (client + API). Deployed on Vercel from the repository root.",
+  "scripts": {
+    "install:all": "npm install --prefix client && npm install --prefix server",
+    "build": "npm run build --prefix client"
+  }
+}
