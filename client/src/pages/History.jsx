@@ -4,6 +4,7 @@ import PageHeader from '../components/common/PageHeader.jsx';
 import Segmented from '../components/common/Segmented.jsx';
 import SourceBadge from '../components/common/SourceBadge.jsx';
 import CycleCard from '../components/history/CycleCard.jsx';
+import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
 import { getReadings, getCycles } from '../services/healthService.js';
 import { useInput } from '../context/InputContext.jsx';
 
@@ -28,7 +29,7 @@ export default function History() {
   const [cycles, setCycles] = useState(null);
 
   const { version } = useInput();
-  useEffect(() => { getCycles(14).then(setCycles).catch(() => setCycles([])); }, [version]);
+  useEffect(() => { getCycles(14).then(setCycles).catch(() => setCycles('error')); }, [version]);
   useEffect(() => {
     let alive = true;
     getReadings(FILTERS[filter], page, PAGE).then((d) => alive && setReadings(d)).catch(() => {});
@@ -36,7 +37,7 @@ export default function History() {
   }, [filter, page]);
 
   const pages = Math.max(1, Math.ceil(readings.total / PAGE));
-  const closed = (cycles || []).filter((c) => c.status === 'closed');
+  const closed = (Array.isArray(cycles) ? cycles : []).filter((c) => c.status === 'closed');
   const avgCompleteness = closed.length ? Math.round((closed.reduce((a, c) => a + c.completeness, 0) / closed.length) * 100) : null;
 
   return (
@@ -54,7 +55,7 @@ export default function History() {
 
       <section className="card grid gap-6 p-6 sm:grid-cols-3">
         {[
-          [cycles ? cycles.length : '—', 'Monitoring cycles'],
+          [Array.isArray(cycles) ? cycles.length : '—', 'Monitoring cycles'],
           [avgCompleteness == null ? '—' : `${avgCompleteness}%`, 'Avg data completeness'],
           [readings.total.toLocaleString(), 'Vital readings recorded'],
         ].map(([v, l]) => (
@@ -78,8 +79,9 @@ export default function History() {
           </div>
           <div className="space-y-4">
             {cycles === null && <p className="text-sm text-ink-soft">Loading…</p>}
-            {cycles?.length === 0 && <p className="card p-6 text-sm text-ink-soft">No cycles yet. Cycles are created automatically once your watch or the simulator sends data.</p>}
-            {cycles?.map((c) => <CycleCard key={c.id} cycle={c} />)}
+            {cycles === 'error' && <ConnectionUnavailable />}
+            {Array.isArray(cycles) && cycles.length === 0 && <p className="card p-6 text-sm text-ink-soft">No cycles yet. Cycles are created automatically once your watch or the simulator sends data.</p>}
+            {Array.isArray(cycles) && cycles.map((c) => <CycleCard key={c.id} cycle={c} />)}
           </div>
         </section>
       ) : (
@@ -92,7 +94,25 @@ export default function History() {
             <Segmented options={Object.keys(FILTERS)} value={filter} onChange={(f) => { setFilter(f); setPage(0); }} />
           </div>
 
-          <div className="card overflow-x-auto">
+          <ul className="card divide-y divide-line sm:hidden">
+            {readings.items.map((r) => (
+              <li key={r.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{r.name}</p>
+                  <p className="text-[11px] text-ink-mute">{fmt(r.ts)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium">{r.value} <span className="text-[11px] font-normal text-ink-mute">{r.unit}</span></p>
+                  <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                    {!r.inRange && <AlertCircle size={12} className="text-amber-600" />}
+                    <SourceBadge source={r.source} confidence={r.confidence} />
+                  </div>
+                </div>
+              </li>
+            ))}
+            {!readings.items.length && <li className="px-4 py-8 text-center text-sm text-ink-soft">No readings recorded yet.</li>}
+          </ul>
+          <div className="card hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-[11px] uppercase tracking-wider text-ink-mute">
@@ -118,12 +138,12 @@ export default function History() {
                 )}
               </tbody>
             </table>
-            <div className="flex items-center justify-between border-t border-line px-6 py-3 text-xs text-ink-mute">
-              <span>{readings.total ? `Showing ${page * PAGE + 1}–${Math.min((page + 1) * PAGE, readings.total)} of ${readings.total.toLocaleString()}` : '—'}</span>
-              <div className="flex gap-2">
-                <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-lg border border-line px-3 py-1.5 disabled:opacity-40">Previous</button>
-                <button disabled={page >= pages - 1} onClick={() => setPage(page + 1)} className="rounded-lg border border-line px-3 py-1.5 disabled:opacity-40">Next</button>
-              </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs text-ink-mute">
+            <span>{readings.total ? `${page * PAGE + 1}–${Math.min((page + 1) * PAGE, readings.total)} of ${readings.total.toLocaleString()}` : '—'}</span>
+            <div className="flex gap-2">
+              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Previous</button>
+              <button disabled={page >= pages - 1} onClick={() => setPage(page + 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Next</button>
             </div>
           </div>
         </section>

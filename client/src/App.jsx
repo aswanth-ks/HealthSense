@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout.jsx';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 import Login from './pages/Login.jsx';
@@ -12,6 +12,8 @@ import Alerts from './pages/Alerts.jsx';
 import MyWatch from './pages/MyWatch.jsx';
 import Settings from './pages/Settings.jsx';
 import Timeline from './pages/Timeline.jsx';
+import Profile from './pages/Profile.jsx';
+import Demo from './pages/Demo.jsx';
 
 export default function App() {
   return (
@@ -29,6 +31,9 @@ export default function App() {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/watch" element={<MyWatch />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/demo" element={<Demo />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Route>
     </Routes>

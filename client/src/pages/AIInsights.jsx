@@ -19,7 +19,7 @@ const PERIOD = { Today: '24H', '7D': '7D', '30D': '30D' };
 const STANDARD = { hr: [40, 130, 60, 100], spo2: [85, 100, 95, 100], temp: [35, 39, 36, 37.5], bp: [80, 160, 90, 130], resp: [4, 30, 12, 20] };
 
 const SectionTitle = ({ eyebrow, title, right }) => (
-  <div className="mb-5 flex items-end justify-between gap-3">
+  <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
     <div>
       <p className="eyebrow">{eyebrow}</p>
       <h2 className="mt-2 text-xl font-medium">{title}</h2>

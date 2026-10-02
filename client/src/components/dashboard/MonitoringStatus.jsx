@@ -17,8 +17,8 @@ export default function MonitoringStatus({ status, triage, changed }) {
       action={<Link to="/insights" aria-label="How is this calculated?"><HelpCircle size={18} className="text-ink-soft hover:text-ink" /></Link>}
       className="lg:col-span-2"
     >
-      <div className="flex flex-col items-start gap-8 sm:flex-row sm:items-center">
-        <div className="grid h-32 w-32 shrink-0 place-items-center rounded-full border-[6px]" style={{ borderColor: `${ring}33`, background: `${ring}12` }}>
+      <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-8">
+        <div className="grid h-28 w-28 shrink-0 sm:h-32 sm:w-32 place-items-center rounded-full border-[6px]" style={{ borderColor: `${ring}33`, background: `${ring}12` }}>
           <div className="text-center">
             <ShieldCheck size={22} className="mx-auto" style={{ color: ring }} />
             <p className={`mt-1 text-lg font-semibold ${t ? t.text : 'text-brand-700'}`}>{triage ? triage.level : status.label}</p>

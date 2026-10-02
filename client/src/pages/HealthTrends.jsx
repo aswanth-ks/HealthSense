@@ -4,6 +4,7 @@ import Card from '../components/common/Card.jsx';
 import LiveDot from '../components/common/LiveDot.jsx';
 import TrendChart from '../components/charts/TrendChart.jsx';
 import { getTrends } from '../services/healthService.js';
+import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
 
 const RANGES = { '24H': 'last 24 hours', '7D': 'last 7 days', '30D': 'last 30 days' };
 const COLORS = { hr: '#d94452', spo2: '#1f9a86', temp: '#b8790f', bp: '#1f6aa5', resp: '#6b7fd7' };
@@ -14,10 +15,11 @@ const today = () => new Date().toLocaleDateString('en-US', { month: 'short', day
 export default function HealthTrends() {
   const [range, setRange] = useState('24H');
   const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    getTrends(range).then((d) => alive && setData(d)).catch(() => {});
+    getTrends(range).then((d) => alive && setData(d)).catch(() => alive && setError(true));
     return () => { alive = false; };
   }, [range]);
 
@@ -26,6 +28,8 @@ export default function HealthTrends() {
   const [stableN, totalN] = (g?.stable || '0/0').split('/').map(Number);
   const unstable = totalN - stableN;
   const allStable = g && unstable === 0;
+
+  if (error && !data) return <ConnectionUnavailable />;
 
   return (
     <div className="space-y-8">
@@ -137,7 +141,9 @@ export default function HealthTrends() {
             <ul className="divide-y divide-line border-t border-line text-sm">
               {data.comparison.map(({ key, label: l, now, delta, up, down, base }) => {
                 const Icon = ICONS[key] || Activity;
-                return (
+                if (error && !data) return <ConnectionUnavailable />;
+
+  return (
                   <li key={l} className="grid grid-cols-[1.2fr_1fr_1fr_1fr] items-center py-3">
                     <span className="flex items-center gap-2 text-ink-soft"><Icon size={15} /> {l}</span>
                     <span className="font-medium">{now}</span>

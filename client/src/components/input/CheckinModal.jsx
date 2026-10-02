@@ -40,7 +40,7 @@ export default function CheckinModal({ open, onClose, prefill, onSaved }) {
         date: prefill?.date,
       };
       const res = await submitCheckin(payload);
-      setDone(res?.saved || ['Check-in saved']);
+      setDone(res?.pending ? 'pending' : res?.saved || ['Check-in saved']);
       onSaved?.();
     } catch (e) {
       setError(e.response?.data?.message || 'Could not save. Please try again.');
@@ -54,7 +54,7 @@ export default function CheckinModal({ open, onClose, prefill, onSaved }) {
       open={open}
       onClose={onClose}
       eyebrow={`Daily check-in · ${dateLabel}`}
-      title={done ? 'Thanks — check-in saved' : 'How are you feeling?'}
+      title={done === 'pending' ? 'Saved on this device' : done ? 'Thanks — check-in saved' : 'How are you feeling?'}
       footer={done ? (
         <button onClick={onClose} className="rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-medium text-white hover:bg-brand-700">Done</button>
       ) : (
@@ -66,7 +66,12 @@ export default function CheckinModal({ open, onClose, prefill, onSaved }) {
         </>
       )}
     >
-      {done ? (
+      {done === 'pending' ? (
+        <div className="space-y-3 text-sm">
+          <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-amber-900"><b>Pending sync — not uploaded yet.</b> There is no connection to the HealthSense server.</p>
+          <p className="text-ink-soft">Your check-in is stored on this device with the time you entered it, and will upload automatically when the connection returns. Your assessment will update then.</p>
+        </div>
+      ) : done ? (
         <div className="space-y-4 text-sm">
           <p className="flex items-center gap-2 text-brand-700"><CheckCircle2 size={18} /> Your answers are saved as <b>Reported</b> data (100% confidence).</p>
           {done.length > 0 && <ul className="list-disc space-y-1 pl-5 text-ink-soft">{done.map((s) => <li key={s}>{s}</li>)}</ul>}

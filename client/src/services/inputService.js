@@ -1,4 +1,5 @@
 import api from './api.js';
+import { sendOrQueue } from './outbox.js';
 import { isDemo } from './healthService.js';
 
 // ---- Demo-mode store (no backend) ----
@@ -32,8 +33,8 @@ export async function answerQuestion(id, answer) {
     notifyDemo();
     return null;
   }
-  const { data } = await api.post(`/me/questions/${id}/answer`, { answer });
-  return data;
+  const res = await sendOrQueue('answer', 'post', `/me/questions/${id}/answer`, { answer });
+  return res.pending ? { pending: true } : res.data;
 }
 
 export async function dismissQuestion(id) {
@@ -52,14 +53,15 @@ export async function submitCheckin(payload) {
     notifyDemo();
     return { ok: true, demo: true };
   }
-  const { data } = await api.post('/me/checkin', payload);
-  return data;
+  // The entry keeps the time the patient made it, even if it is uploaded later.
+  const res = await sendOrQueue('checkin', 'post', '/me/checkin', { ...payload, date: payload.date || new Date().toISOString() });
+  return res.pending ? { pending: true } : res.data;
 }
 
 export async function logSymptom(payload) {
   if (isDemo()) return { ok: true, demo: true };
-  const { data } = await api.post('/me/symptoms', payload);
-  return data;
+  const res = await sendOrQueue('symptom', 'post', '/me/symptoms', { ...payload, ts: new Date().toISOString() });
+  return res.pending ? { pending: true } : res.data;
 }
 
 export async function getSymptoms(days = 7) {

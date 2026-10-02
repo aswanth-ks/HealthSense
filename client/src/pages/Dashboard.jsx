@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ClipboardCheck } from 'lucide-react';
 import useOverview from '../hooks/useOverview.js';
 import useQuestions from '../hooks/useQuestions.js';
@@ -15,6 +16,7 @@ import HeartRateChart from '../components/charts/HeartRateChart.jsx';
 import FocusCard from '../components/dashboard/FocusCard.jsx';
 import RecentEvents from '../components/dashboard/RecentEvents.jsx';
 import WearableCard from '../components/dashboard/WearableCard.jsx';
+import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
 
 // Overview reads top → bottom as: how am I? → what do you need from me? → my numbers → what's being watched → what happened.
 export default function Dashboard() {
@@ -23,7 +25,31 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { openCheckin } = useInput();
   const { questions, reload } = useQuestions('open');
+  const [params, setParams] = useSearchParams();
+
+  // Home-screen shortcut "Daily check-in" opens /?checkin=1
+  useEffect(() => {
+    if (params.get('checkin') === '1') { openCheckin(); params.delete('checkin'); setParams(params, { replace: true }); }
+  }, [params, setParams, openCheckin]);
   if (!data) return <p className="text-ink-soft">Loading…</p>;
+  if (data.error) {
+    // Offline: no health data is shown, but entering a check-in still works (saved as "pending sync").
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">{formatDate()}</p>
+            <h1 className="mt-3 text-3xl font-medium sm:text-4xl">{greeting()}, {(user?.name || '').split(' ')[0]}</h1>
+          </div>
+          <button onClick={() => openCheckin()} className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700">
+            <ClipboardCheck size={14} /> Daily check-in
+          </button>
+        </div>
+        <ConnectionUnavailable />
+        <p className="text-center text-xs text-ink-mute">You can still add a daily check-in or log a symptom. It is kept on this device as <b>pending sync</b> and uploaded when you are back online.</p>
+      </div>
+    );
+  }
 
   const triage = tri?.current || data.triage;
   const focus = tri?.loop?.next || data.focus;

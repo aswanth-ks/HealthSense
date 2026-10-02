@@ -11,9 +11,9 @@ export default function ModuleCard({ module: m }) {
   const Icon = meta.icon;
   return (
     <section className="card flex flex-col p-6">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${meta.tint}`}><Icon size={18} /></span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[160px] flex-1">
           <p className="eyebrow">Risk module</p>
           <h3 className="mt-1 text-base font-medium">{m.title}</h3>
           <p className="mt-0.5 text-[11px] text-ink-mute">{meta.inputs}</p>

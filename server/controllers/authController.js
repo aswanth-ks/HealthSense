@@ -5,11 +5,12 @@ import { asyncHandler, httpError } from '../middleware/errorHandler.js';
 const respond = (res, user, status = 200) => res.status(status).json({ token: generateToken(user), user: user.toPublic() });
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
   if (!name || !email || !password) throw httpError(400, 'Name, email and password are required');
   if (await User.exists({ email: email.toLowerCase() })) throw httpError(409, 'Email already registered');
 
-  const user = await User.create({ name, email, password, role: role === 'clinician' ? 'clinician' : 'patient' });
+  // HealthSense is a patient app: every self-registered account is a patient account.
+  const user = await User.create({ name, email, password, role: 'patient' });
   respond(res, user, 201);
 });
 

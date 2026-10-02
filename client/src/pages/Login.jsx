@@ -15,8 +15,8 @@ export default function Login() {
     setBusy(true);
     setError('');
     try {
-      const u = await login(form.email, form.password);
-      navigate(u.role === 'clinician' ? '/clinician' : '/');
+      await login(form.email, form.password);
+      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not reach the server. Try demo mode.');
     } finally {

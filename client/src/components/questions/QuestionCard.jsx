@@ -19,7 +19,8 @@ export default function QuestionCard({ question: q, onDone, compact = false }) {
   const submit = async (answer) => {
     setState('saving');
     try {
-      await answerQuestion(q.id, answer);
+      const res = await answerQuestion(q.id, answer);
+      if (res?.pending) { setState('pending'); return; }
       setState('done');
       setTimeout(() => onDone?.(), 900);
     } catch {
@@ -30,6 +31,14 @@ export default function QuestionCard({ question: q, onDone, compact = false }) {
     await dismissQuestion(q.id).catch(() => {});
     onDone?.();
   };
+
+  if (state === 'pending') {
+    return (
+      <div className="card border-amber-200 bg-amber-50/60 p-5 text-sm text-amber-900">
+        <b>Answer saved on this device — pending sync.</b> It will be sent when the connection returns; your assessment updates after that.
+      </div>
+    );
+  }
 
   if (state === 'done') {
     return (

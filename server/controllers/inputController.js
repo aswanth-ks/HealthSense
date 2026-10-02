@@ -89,9 +89,10 @@ export const checkin = asyncHandler(async (req, res) => {
 
 /** POST /api/me/symptoms { type, severity, location?, notes? } */
 export const logSymptom = asyncHandler(async (req, res) => {
-  const { type, severity, location, notes } = req.body || {};
+  const { type, severity, location, notes, ts } = req.body || {};
   if (!SYMPTOM_TYPES.includes(type)) throw httpError(400, `type must be one of ${SYMPTOM_TYPES.join(', ')}`);
-  const log = await SymptomLog.create({ userId: req.user._id, type, severity: clampNum(severity, 0, 10) ?? 5, location, notes, source: 'reported' });
+  const when = ts && !Number.isNaN(new Date(ts).getTime()) && new Date(ts) <= new Date() ? new Date(ts) : new Date();
+  const log = await SymptomLog.create({ userId: req.user._id, ts: when, type, severity: clampNum(severity, 0, 10) ?? 5, location, notes, source: 'reported' });
   await TimelineEvent.create({ userId: req.user._id, kind: 'symptom', title: 'Symptom logged', detail: `${type.replace('_', ' ')} · severity ${log.severity}/10` });
   await afterInput(req.user._id);
   res.status(201).json(log);

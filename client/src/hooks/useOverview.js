@@ -11,7 +11,7 @@ export default function useOverview() {
     let alive = true;
     let last = 0;
     let timer = null;
-    const load = () => getOverview().then((d) => alive && setData(d)).catch(() => {});
+    const load = () => getOverview().then((d) => alive && setData(d)).catch(() => alive && setData((cur) => cur || { error: true }));
     load();
     if (isDemo()) return () => { alive = false; };
 

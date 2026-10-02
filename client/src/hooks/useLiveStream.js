@@ -79,7 +79,7 @@ function useRealStream() {
 
   useEffect(() => {
     let alive = true;
-    getLiveSnapshot().then((snap) => {
+    getLiveSnapshot().catch(() => null).then((snap) => {
       if (!alive || !snap) return;
       const readings = Object.entries(snap.latest).map(([metric, r]) => ({ metric, ...r }));
       setState((s) => {

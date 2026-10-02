@@ -12,7 +12,7 @@ export default function HeartRateChart() {
 
   useEffect(() => {
     let alive = true;
-    getHeartRateSeries(range).then((d) => alive && setData(d));
+    getHeartRateSeries(range).then((d) => alive && setData(d)).catch(() => alive && setData([]));
     return () => { alive = false; };
   }, [range]);
 

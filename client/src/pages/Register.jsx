@@ -2,14 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell, { Field, inputCls } from '../components/auth/AuthShell.jsx';
-import Segmented from '../components/common/Segmented.jsx';
-
-const ROLES = { Patient: 'patient', Clinician: 'clinician' };
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Patient' });
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -18,8 +15,8 @@ export default function Register() {
     setBusy(true);
     setError('');
     try {
-      const u = await register({ ...form, role: ROLES[form.role] });
-      navigate(u.role === 'clinician' ? '/clinician' : '/');
+      await register({ name: form.name, email: form.email, password: form.password });
+      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Could not reach the server.');
     } finally {
@@ -36,10 +33,6 @@ export default function Register() {
       footer={<>Already have an account? <Link to="/login" className="text-brand-700 hover:underline">Sign in</Link></>}
     >
       <form onSubmit={submit} className="space-y-4">
-        <div>
-          <span className="mb-1.5 block text-xs text-ink-soft">I am a</span>
-          <Segmented options={Object.keys(ROLES)} value={form.role} onChange={(role) => setForm({ ...form, role })} />
-        </div>
         <Field label="Full name"><input required className={inputCls} value={form.name} onChange={set('name')} /></Field>
         <Field label="Email"><input type="email" required className={inputCls} value={form.email} onChange={set('email')} /></Field>
         <Field label="Password (min 6 characters)"><input type="password" required minLength={6} className={inputCls} value={form.password} onChange={set('password')} /></Field>

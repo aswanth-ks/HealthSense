@@ -29,10 +29,10 @@ export default function SymptomLogButton() {
   const save = async () => {
     setState('saving');
     try {
-      await logSymptom({ type, severity });
-      setState('saved');
+      const res = await logSymptom({ type, severity });
+      setState(res?.pending ? 'pending' : 'saved');
       bump();
-      setTimeout(() => { setOpen(false); setState('idle'); setType(null); setSeverity(5); }, 1100);
+      setTimeout(() => { setOpen(false); setState('idle'); setType(null); setSeverity(5); }, 2200);
     } catch {
       setState('error');
     }
@@ -50,6 +50,8 @@ export default function SymptomLogButton() {
         <div className="absolute right-0 top-full z-40 mt-2 w-80 rounded-2xl border border-line bg-white p-5 shadow-lg">
           {state === 'saved' ? (
             <p className="flex items-center gap-2 py-4 text-sm text-brand-700"><CheckCircle2 size={18} /> Symptom logged</p>
+          ) : state === 'pending' ? (
+            <p className="py-3 text-sm text-amber-900"><b>Saved on this device — pending sync.</b> It will upload when the connection returns.</p>
           ) : (
             <div className="space-y-4">
               <p className="eyebrow">Quick log</p>

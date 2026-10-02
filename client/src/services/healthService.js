@@ -3,16 +3,12 @@ import { mockOverview, mockHeartRateSeries, mockTrends, mockReadings, mockCycles
 
 const isDemo = () => { try { return localStorage.getItem('demo') === '1'; } catch { return true; } };
 
-// Demo mode uses mock data; signed-in users hit the API and fall back to mock only if it is unreachable.
+// Demo mode uses sample data. Signed-in users only ever see their real data: if the backend can't be
+// reached the request fails and the page shows "Connection unavailable" — never sample data in its place.
 async function fetchOr(path, params, fallback) {
   if (isDemo()) return fallback();
-  try {
-    const { data } = await api.get(path, { params });
-    return data;
-  } catch (err) {
-    if (err.response?.status === 401) throw err;
-    return fallback();
-  }
+  const { data } = await api.get(path, { params });
+  return data;
 }
 
 export const getOverview = () => fetchOr('/me/overview', undefined, () => mockOverview);
