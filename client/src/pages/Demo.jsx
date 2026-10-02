@@ -2,7 +2,7 @@ import Section from '../components/common/Section.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarHeart, CalendarRange, FlaskConical, Play, RotateCcw, Moon, Activity, DatabaseZap, CheckCircle2, Loader2, ArrowRight, ShieldCheck, MessageCircleQuestion, Target, GraduationCap,
+  CalendarHeart, CalendarRange, Footprints, FlaskConical, Play, RotateCcw, Moon, Activity, DatabaseZap, CheckCircle2, Loader2, ArrowRight, ShieldCheck, MessageCircleQuestion, Target, GraduationCap,
 } from 'lucide-react';
 import api from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -15,6 +15,7 @@ const STEPS = [
   { id: 'symptoms', icon: Activity, title: 'Recurring symptom pattern', text: 'Reports strong cramps/pain and fatigue on 3 days around menstruation (endometriosis-associated module).', see: ['/insights', 'Risk explanation'] },
   { id: 'threeDay', icon: CalendarRange, title: '3-Day Sleep Pattern', text: 'Resets the account, learns a baseline, then: day 1 reduced sleep + fatigue · day 2 breathing irregularity + SpO₂ dips · day 3 repeated + fatigue. Open the 3-Day Assessment, answer the question, watch it update.', see: ['/insights/3-day-assessment', '3-Day Assessment'] },
   { id: 'menstrual', icon: CalendarHeart, title: 'Menstrual cycle pattern', text: 'Enables cycle tracking and generates 3 cycles where days 1–3 bring strong pain, fatigue and reduced activity. Recurring pattern → adaptive question → answer → risk/context update → next-cycle priorities. (Resets the account first.)', see: ['/cycle', 'Cycle & Health'] },
+  { id: 'steps', icon: Footprints, title: 'Daily steps (phone health data)', text: 'Adds 30 days of step history as if imported from Health Connect — clearly marked as demo data, one day deliberately missing. Steps feed the personal baseline and the 3-Day Assessment.', see: ['/insights/steps-history', 'Steps History'] },
   { id: 'missing', icon: DatabaseZap, title: 'Missing data', text: 'Removes last night\'s SpO₂, breathing and movement (watch not worn). Sensor → estimate → ask you.', see: ['/history', 'See the cycle'] },
 ];
 

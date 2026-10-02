@@ -17,6 +17,7 @@ import HeartRateChart from '../components/charts/HeartRateChart.jsx';
 import FocusCard from '../components/dashboard/FocusCard.jsx';
 import RecentEvents from '../components/dashboard/RecentEvents.jsx';
 import WearableCard from '../components/dashboard/WearableCard.jsx';
+import DailyStepsCard from '../components/health/DailyStepsCard.jsx';
 import CycleHealthCard from '../components/cycle/CycleHealthCard.jsx';
 import useCycle from '../hooks/useCycle.js';
 import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
@@ -82,7 +83,10 @@ export default function Dashboard() {
       <Section tone="teal" icon={ShieldCheck} eyebrow="Your status" title="How you're doing today">
         <div className="grid gap-5 lg:grid-cols-3">
           <MonitoringStatus status={data.status} triage={triage} changed={tri?.current?.changed} />
-          <TodayCard today={data.today} baseline={data.baseline} lastCycle={data.lastCycle} />
+          <div className="space-y-5">
+            <TodayCard today={data.today} baseline={data.baseline} lastCycle={data.lastCycle} />
+            <DailyStepsCard />
+          </div>
         </div>
       </Section>
 

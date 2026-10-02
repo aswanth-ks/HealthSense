@@ -33,6 +33,18 @@ const userSchema = new mongoose.Schema(
       // Optional, user-reported symptoms during previous cycles (setup questionnaire)
       reportedSymptoms: [{ _id: false, symptom: String, present: { type: String, enum: ['yes', 'no', 'not_sure'] }, severity: Number }],
     },
+    // Phone health-platform connection (set by the HealthSense mobile bridge, never assumed).
+    healthConnection: {
+      source: { type: String, enum: ['HEALTH_CONNECT', 'APPLE_HEALTH', 'DEMO', null], default: null },
+      status: { type: String, enum: ['not_connected', 'connected', 'permission_denied', 'disconnected'], default: 'not_connected' },
+      grantedMetrics: [String], // only metrics the user explicitly authorised on the phone
+      connectedAt: Date,
+      lastSyncAt: Date, // last *successful* sync
+      lastSyncStatus: { type: String, enum: ['ok', 'failed', null], default: null },
+      lastSyncError: String,
+      lastAttemptAt: Date,
+      demo: { type: Boolean, default: false },
+    },
     // Monitoring ranges configured by the user (Settings page)
     ranges: {
       hrMin: { type: Number, default: 60 },

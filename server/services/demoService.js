@@ -16,6 +16,8 @@ import MenstrualCycle from '../models/MenstrualCycle.js';
 import MenstrualSymptom from '../models/MenstrualSymptom.js';
 import CycleBaseline from '../models/CycleBaseline.js';
 import Assessment from '../models/Assessment.js';
+import HealthRecord from '../models/HealthRecord.js';
+import { dayKey, addDays } from '../engines/stepsEngine.js';
 import { startPeriod } from './menstrualService.js';
 
 const STEP = 5 * 60_000; // 5-minute resolution
@@ -58,6 +60,9 @@ export const SCENARIOS = {
   async reset(userId) {
     await Promise.all([Reading, Cycle, Baseline, Question, TriageEvent, TimelineEvent, SymptomLog, MenstrualCycle, MenstrualSymptom, CycleBaseline, Assessment].map((M) => M.deleteMany({ userId })));
     await User.updateOne({ _id: userId }, { $set: { device: { packets: 0 }, deviceId: '', 'cycle.tracking': false }, $unset: { 'cycle.lastPeriodStart': '', 'cycle.setupAt': '' } });
+    // Only demo step data is removed — real data imported from the phone is never touched by Demo Mode.
+    await HealthRecord.deleteMany({ userId, demo: true });
+    await User.updateOne({ _id: userId, 'healthConnection.demo': true }, { $set: { healthConnection: { status: 'not_connected', grantedMetrics: [], demo: false } } });
     return 'All monitoring data for this account was cleared.';
   },
 
@@ -189,6 +194,32 @@ export const SCENARIOS = {
     await markDevice(userId, true);
     await updateCycles(userId, { full: true });
     return '3-day sleep pattern generated: reduced sleep and fatigue on day 1, nighttime breathing irregularity with SpO₂ dips on days 2 and 3, fatigue again on day 3. Open the 3-Day Assessment.';
+  },
+
+  /**
+   * Daily steps as if imported from Health Connect — DEMO source, flagged demo: true, never mixed with real data.
+   * 30 days (one day deliberately missing), last 7 days: 6,120 · 5,840 · 7,210 · 4,980 · 6,430 · 7,020 · 6,842.
+   */
+  async steps(userId) {
+    const todayKey = dayKey(new Date());
+    const last7 = [6120, 5840, 7210, 4980, 6430, 7020, 6842];
+    const older = [7480, 6950, 8120, 7310, 6640, 8920, 7050, 6380, 7720, 6910, 5980, 7240, 6510, 7830, 6200, 3842, 6720, 7150, 6890, 7400, 6030, 7600, 6470];
+    const values = [...older, ...last7]; // oldest → today (30 days)
+    const now = new Date();
+    const docs = values.map((v, i) => ({ date: addDays(todayKey, i - (values.length - 1)), value: v }))
+      .filter((d) => d.date !== addDays(todayKey, -12)); // a missing day: shown as "No data available", never as 0
+    await HealthRecord.deleteMany({ userId, demo: true });
+    await HealthRecord.insertMany(docs.map((d) => ({
+      userId, metric: 'steps', value: d.value, unit: 'steps', date: d.date, source: 'DEMO', provenance: 'IMPORTED',
+      confidence: 1, sourceRecordId: `demo_steps_${d.date}`, syncedAt: now, demo: true,
+    })));
+    // Show a connected state for the demo unless a real phone platform is already connected.
+    await User.updateOne({ _id: userId, 'healthConnection.status': { $ne: 'connected' } }, { $set: { healthConnection: {
+      source: 'DEMO', status: 'connected', grantedMetrics: ['steps'], connectedAt: now, lastSyncAt: now, lastSyncStatus: 'ok', lastAttemptAt: now, demo: true,
+    } } });
+    await User.updateOne({ _id: userId, 'healthConnection.demo': true }, { $set: { 'healthConnection.lastSyncAt': now } });
+    await updateCycles(userId, { dates: docs.map((d) => d.date) });
+    return '30 days of demo step history added (as if imported from Health Connect; marked as demo data). Open Overview → Daily Steps → History.';
   },
 
   /** Watch not worn last night: SpO2, breathing and movement missing; no reported sleep. */

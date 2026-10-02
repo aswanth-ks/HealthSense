@@ -4,6 +4,8 @@ import { waitUntil } from '@vercel/functions';
 import Reading from '../models/Reading.js';
 import Cycle from '../models/Cycle.js';
 import Baseline from '../models/Baseline.js';
+import HealthRecord from '../models/HealthRecord.js';
+import { dayKey, keyToDate, buildSeries } from '../engines/stepsEngine.js';
 import TimelineEvent from '../models/TimelineEvent.js';
 import { cycleWindow, summarizeCycle, DAY_MS } from '../engines/cycleEngine.js';
 import { buildBaseline } from '../engines/baselineEngine.js';
@@ -40,8 +42,16 @@ export function scheduleCycleUpdate(userId) {
 }
 
 export async function upsertCycle(userId, start, end, index, status) {
-  const readings = await Reading.find({ userId, ts: { $gte: start, $lt: end } }).select('metric value ts source confidence -_id').lean();
-  const summary = summarizeCycle(readings, start, end);
+  const key = dayKey(start);
+  const [readings, stepRecs] = await Promise.all([
+    Reading.find({ userId, ts: { $gte: start, $lt: end } }).select('metric value ts source confidence -_id').lean(),
+    HealthRecord.find({ userId, metric: 'steps', date: key }).select('date value source confidence syncedAt -_id').lean(),
+  ]);
+  // Daily step total imported from Health Connect / Apple Health (real platform preferred over demo data)
+  const day = buildSeries(stepRecs, key, 1)[0];
+  const best = stepRecs.find((x) => x.source === day.source);
+  const imported = day.steps != null ? { steps: { value: day.steps, source: day.source, confidence: best?.confidence ?? 1 } } : {};
+  const summary = summarizeCycle(readings, start, end, {}, imported);
   return Cycle.findOneAndUpdate(
     { userId, start },
     { $set: { ...summary, end, status }, $setOnInsert: { userId, index, start } },
@@ -60,11 +70,16 @@ export function updateCycles(userId, opts = {}) {
 }
 
 /** Build/refresh every cycle from the first reading to today, then recompute the baseline. */
-async function doUpdateCycles(userId, { full = false } = {}) {
-  const first = await Reading.findOne({ userId }).sort({ ts: 1 }).select('ts').lean();
-  if (!first) { await runTriage(userId); return null; }
+async function doUpdateCycles(userId, { full = false, dates = [] } = {}) {
+  const [firstReading, firstImport] = await Promise.all([
+    Reading.findOne({ userId }).sort({ ts: 1 }).select('ts').lean(),
+    HealthRecord.findOne({ userId }).sort({ date: 1 }).select('date').lean(),
+  ]);
+  const firstTs = [firstReading?.ts, firstImport && keyToDate(firstImport.date)].filter(Boolean).sort((a, b) => a - b)[0];
+  if (!firstTs) { await runTriage(userId); return null; }
+  const forced = new Set(dates); // days whose imported health data just changed
 
-  const { start: firstStart } = cycleWindow(first.ts);
+  const { start: firstStart } = cycleWindow(firstTs);
   const { start: todayStart } = cycleWindow(new Date());
   const existing = await Cycle.find({ userId }).select('start status updatedAt').lean();
   const closed = new Map(existing.filter((c) => c.status === 'closed').map((c) => [c.start.getTime(), c]));
@@ -80,7 +95,7 @@ async function doUpdateCycles(userId, { full = false } = {}) {
   const needsWork = async ({ t, isToday, done }) => {
     // A closed cycle is only recomputed if readings for its window arrived after it was computed
     // (e.g. the watch uploads buffered data after a Wi-Fi drop). ObjectIds encode insert time.
-    if (isToday || !done || full) return true;
+    if (isToday || !done || full || forced.has(dayKey(new Date(t)))) return true;
     return !!(await Reading.exists({
       userId, ts: { $gte: new Date(t), $lt: new Date(t + DAY_MS) },
       _id: { $gt: mongoose.Types.ObjectId.createFromTime(Math.floor(new Date(done.updatedAt).getTime() / 1000)) },

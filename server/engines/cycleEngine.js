@@ -22,7 +22,7 @@ const isNight = (ts) => {
  * reported: { sleepHours?, steps? } values the user entered for this cycle (override estimates)
  * Returns aggregates, activity, sleep, completeness, confidence, missing[].
  */
-export function summarizeCycle(allReadings, start, end, reported = {}) {
+export function summarizeCycle(allReadings, start, end, reported = {}, imported = {}) {
   // sleep/steps entered by the user or written by the missing-data engine arrive as readings too
   const latest = (metric, source) => allReadings.filter((r) => r.metric === metric && r.source === source).sort((a, b) => b.ts - a.ts)[0];
   const repSleep = latest('sleep', 'reported');
@@ -56,10 +56,13 @@ export function summarizeCycle(allReadings, start, end, reported = {}) {
     };
   }
 
-  // Activity (steps): measured sum, or reported value
+  // Activity (steps): user correction > daily total imported from the phone's health platform
+  // (Health Connect / Apple Health) > measured sensor sum > estimate.
+  // imported: { steps: { value, source: 'HEALTH_CONNECT'|'APPLE_HEALTH'|'DEMO', confidence } }
   const stepRows = byMetric.steps || [];
   let activity;
   if (reported.steps != null) activity = { steps: reported.steps, source: 'reported', confidence: 1 };
+  else if (imported.steps?.value != null) activity = { steps: Math.round(imported.steps.value), source: 'imported', origin: imported.steps.source, confidence: imported.steps.confidence ?? 1 };
   else if (stepRows.length) activity = { steps: Math.round(stepRows.reduce((a, r) => a + r.value, 0)), source: 'measured', confidence: round((coverage.steps ?? 0) * 0.95, 2) };
   else if (estSteps) activity = { steps: Math.round(estSteps.value), source: 'estimated', confidence: estSteps.confidence };
   else activity = { steps: null, source: null, confidence: 0 };

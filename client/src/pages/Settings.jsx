@@ -5,6 +5,7 @@ import PageHeader from '../components/common/PageHeader.jsx';
 import Card from '../components/common/Card.jsx';
 import Toggle from '../components/common/Toggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import HealthDataCard from '../components/health/HealthDataCard.jsx';
 import HealthTrackingCard from '../components/cycle/HealthTrackingCard.jsx';
 import api from '../services/api.js';
 
@@ -42,6 +43,12 @@ export default function Settings() {
   const [state, setState] = useState({ status: 'idle', msg: '' });
 
   useEffect(() => { setForm(fromUser(user)); }, [user]);
+  // "Connect" links from the Overview / Steps History land on /settings#health-data
+  useEffect(() => {
+    if (window.location.hash !== '#health-data') return;
+    const t = setTimeout(() => document.getElementById('health-data')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }));
   const setRange = (k) => (e) => setForm((f) => ({ ...f, ranges: { ...f.ranges, [k]: e.target.value } }));
@@ -140,6 +147,10 @@ export default function Settings() {
             </ul>
           )}
         </Card>
+      </Section>
+
+      <Section id="health-data" tone="sky" className="!p-2 sm:!p-3">
+        <HealthDataCard />
       </Section>
 
       <Section tone="teal">

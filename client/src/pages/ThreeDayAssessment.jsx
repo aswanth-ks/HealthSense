@@ -361,7 +361,7 @@ export default function ThreeDayAssessment() {
       <Section id="quality" n={9} tone="slate" icon={Database} eyebrow="Transparency" title="Data quality & confidence">
         <div className="card p-5">
           <div className="space-y-3">
-            {[['measured', 'Measured', 'MEASURED', 'bg-brand-500'], ['user_reported', 'User reported', 'USER_REPORTED', 'bg-blue-500'], ['historical', 'Historical', 'HISTORICAL', 'bg-violet-500'], ['estimated', 'AI estimated', 'AI_ESTIMATED', 'bg-amber-500']].map(([k, l, p, bar]) => (
+            {[['measured', 'Measured', 'MEASURED', 'bg-brand-500'], ['user_reported', 'User reported', 'USER_REPORTED', 'bg-blue-500'], ['historical', 'Historical', 'HISTORICAL', 'bg-violet-500'], ['estimated', 'AI estimated', 'AI_ESTIMATED', 'bg-amber-500'], ['imported', 'Imported', 'IMPORTED', 'bg-sky-500']].filter(([k]) => k !== 'imported' || a.data_quality.imported_points > 0).map(([k, l, p, bar]) => (
               <div key={k} className="flex items-center gap-3 text-sm">
                 <span className="w-28 shrink-0"><ProvenancePill p={p} /></span>
                 <div className="h-2 flex-1 rounded-full bg-line"><div className={`h-full rounded-full ${bar}`} style={{ width: `${Math.min(100, a.data_quality.percentages[k] || 0)}%`, minWidth: a.data_quality.percentages[k] > 0 ? 4 : 0 }} /></div>

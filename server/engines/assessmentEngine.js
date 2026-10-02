@@ -7,13 +7,15 @@
 import { describe, round } from './stats.js';
 import { interpret } from './baselineEngine.js';
 
-export const ENGINE_VERSION = 'assessment-engine-1.1.0';
+export const ENGINE_VERSION = 'assessment-engine-1.2.0';
 const DAY = 24 * 3600_000;
 const LEVELS = ['LOW', 'MONITOR', 'MODERATE', 'HIGH'];
 const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const avg = (xs) => { const v = xs.filter((x) => x != null && Number.isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-const PROV = { measured: 'MEASURED', reported: 'USER_REPORTED', user_reported: 'USER_REPORTED', estimated: 'AI_ESTIMATED', ai_estimated: 'AI_ESTIMATED', historical: 'HISTORICAL' };
+const PROV = { measured: 'MEASURED', reported: 'USER_REPORTED', user_reported: 'USER_REPORTED', estimated: 'AI_ESTIMATED', ai_estimated: 'AI_ESTIMATED', historical: 'HISTORICAL', imported: 'IMPORTED' };
 const prov = (s) => PROV[s] || 'MEASURED';
+// Evidence source: imported values keep their platform (HEALTH_CONNECT / APPLE_HEALTH / DEMO).
+const evSource = (x) => (x?.source === 'imported' ? x.origin || 'IMPORTED' : { MEASURED: 'sensor', USER_REPORTED: 'user' }[prov(x?.source)] || 'estimate');
 
 const METRICS = {
   sleep_duration: { label: 'Sleep', unit: 'hours', base: 'sleep', get: (d) => d.sleep?.hours, src: (d) => d.sleep },
@@ -53,7 +55,9 @@ export function buildAssessment({ days = [], history = [], baseline = {}, triage
   const baseStat = (key, m) => {
     if (key === 'resting_hr') return histNightHr && histNightHr.n >= 3 ? { mean: histNightHr.mean, sd: Math.max(histNightHr.sd, 2), n: histNightHr.n, source: 'HISTORICAL' } : null;
     const b = baseline.metrics?.[m.base];
-    return b && baselineReady ? { ...b, source: 'HISTORICAL' } : null;
+    // The activity baseline can come from imported daily step totals before the sensor baseline is established.
+    const ready = baselineReady || (key === 'activity' && (b?.n ?? 0) >= 3);
+    return b && ready ? { ...b, source: 'HISTORICAL' } : null;
   };
 
   const baselineComparison = [];
@@ -67,9 +71,10 @@ export function buildAssessment({ days = [], history = [], baseline = {}, triage
     const b = baseStat(key, m);
     const evIds = vals.map(({ d, v }) => addEv({
       metric: key, label: m.label, value: round(v, m.unit === 'steps' ? 0 : 2), unit: m.unit, timestamp: d.start,
-      day: fmtDate(d.start), source: prov(m.src(d)?.source) === 'MEASURED' ? 'sensor' : prov(m.src(d)?.source) === 'USER_REPORTED' ? 'user' : 'estimate',
+      day: fmtDate(d.start), source: evSource(m.src(d)),
       provenance: prov(m.src(d)?.source), confidence: m.src(d)?.confidence ?? null,
       baseline: b ? round(b.mean, 2) : null,
+      ...(b && b.mean ? { deviation_percent: round(((v - b.mean) / b.mean) * 100, 1) } : {}),
     }));
     const row = {
       metric: key, label: m.label, unit: m.unit,
@@ -208,7 +213,7 @@ export function buildAssessment({ days = [], history = [], baseline = {}, triage
     }
     if (d.activity?.steps != null && cmp.activity?.baseline) {
       const pct = Math.round(((d.activity.steps - cmp.activity.baseline) / cmp.activity.baseline) * 100);
-      if (pct <= -20) items.push({ kind: 'activity', title: 'Activity lower than usual', detail: `${d.activity.steps.toLocaleString('en-US')} steps (${pct}%)`, provenance: prov(d.activity.source) });
+      if (pct <= -20) items.push({ kind: 'activity', title: 'Activity was lower than your recent baseline', detail: `${d.activity.steps.toLocaleString('en-US')} steps (${pct}%)`, provenance: prov(d.activity.source) });
     }
     // System events that matter to the story (priority changes are shown in "Next 24-hour monitoring focus")
     for (const t of timeline.filter((x) => inDay(x.ts) && ['question', 'answer', 'triage'].includes(x.kind))) {
@@ -364,7 +369,8 @@ function dataQuality({ counts, completeness, confidence }) {
     user_reported_points: counts.user_reported || 0,
     historical_points: counts.historical || 0,
     estimated_points: counts.estimated || 0,
-    percentages: { measured: pct(counts.measured), user_reported: pct(counts.user_reported), historical: pct(counts.historical), estimated: pct(counts.estimated) },
+    imported_points: counts.imported || 0,
+    percentages: { measured: pct(counts.measured), user_reported: pct(counts.user_reported), historical: pct(counts.historical), estimated: pct(counts.estimated), imported: pct(counts.imported) },
   };
 }
 

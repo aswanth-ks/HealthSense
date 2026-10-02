@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Moon, Droplets, User, History, Sparkles } from 'lucide-react';
+import { Activity, Moon, Droplets, User, History, Sparkles, Smartphone } from 'lucide-react';
 import Modal from '../common/Modal.jsx';
 import { getEvidence } from '../../services/assessmentApi.js';
 
@@ -8,6 +8,7 @@ const PROV = {
   USER_REPORTED: { label: 'Reported by you', cls: 'bg-blue-50 text-blue-700', icon: User },
   HISTORICAL: { label: 'Historical', cls: 'bg-violet-50 text-violet-700', icon: History },
   AI_ESTIMATED: { label: 'AI estimated', cls: 'bg-amber-50 text-amber-700', icon: Sparkles },
+  IMPORTED: { label: 'Imported · phone health', cls: 'bg-sky-50 text-sky-800', icon: Smartphone },
 };
 const UNIT = (e) => (e.unit === 'hours' ? 'h' : e.unit === '/10' ? '/10' : e.unit ? ` ${e.unit}` : '');
 

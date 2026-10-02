@@ -26,9 +26,16 @@ export function buildBaseline(cycles) {
     .sort((a, b) => new Date(b.start) - new Date(a.start))
     .slice(0, WINDOW_DAYS);
 
+  // Steps imported from the phone's health platform are complete daily totals, so those days count
+  // for the activity baseline even when the watch wasn't worn (sensor completeness doesn't apply).
+  const stepDays = cycles
+    .filter((c) => c.activity?.steps != null && ((c.completeness ?? 0) >= MIN_COMPLETENESS || c.activity.source === 'imported'))
+    .sort((a, b) => new Date(b.start) - new Date(a.start))
+    .slice(0, WINDOW_DAYS);
+
   const metrics = {};
   for (const m of BASELINE_METRICS) {
-    const s = describe(usable.map((c) => cycleValue(c, m)));
+    const s = describe((m === 'steps' ? stepDays : usable).map((c) => cycleValue(c, m)));
     if (!s) continue;
     const sd = Math.max(s.sd, MIN_SD[m]);
     metrics[m] = { mean: round(s.mean, 2), sd: round(sd, 2), p10: round(s.p10, 2), p90: round(s.p90, 2), n: s.n };

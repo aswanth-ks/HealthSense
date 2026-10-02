@@ -64,6 +64,7 @@ async function gather(user, start, end) {
     user_reported: (src.reported || 0) + symptoms.length + answered,
     historical: (baseline.daysUsed || 0) + history.length + (menstrual?.pattern?.perCycle?.length || 0),
     estimated: src.estimated || 0,
+    imported: days.filter((d) => d.activity?.source === 'imported').length, // daily totals from Health Connect / Apple Health
   };
 
   const inputsHash = crypto.createHash('sha1').update(JSON.stringify([

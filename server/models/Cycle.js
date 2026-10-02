@@ -10,7 +10,7 @@ const cycleSchema = new mongoose.Schema(
     status: { type: String, enum: ['open', 'closed'], default: 'open' },
     // { hr: { mean, min, max, count, source, confidence }, ... }
     aggregates: { type: mongoose.Schema.Types.Mixed, default: {} },
-    activity: { steps: Number, activeMinutes: Number, source: String, confidence: Number },
+    activity: { steps: Number, activeMinutes: Number, source: String, origin: String, confidence: Number }, // origin: HEALTH_CONNECT | APPLE_HEALTH | DEMO when imported
     sleep: { hours: Number, quality: Number, source: String, confidence: Number },
     symptoms: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SymptomLog' }],
     missing: [{ field: String, resolution: { type: String, enum: ['awaiting_sensor', 'estimated', 'asked', 'resolved', 'unresolved'] } }],

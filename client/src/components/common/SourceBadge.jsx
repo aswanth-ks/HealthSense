@@ -2,6 +2,7 @@ const STYLES = {
   measured: { label: 'Measured', cls: 'bg-brand-50 text-brand-700' },
   reported: { label: 'Reported', cls: 'bg-blue-50 text-blue-700' },
   estimated: { label: 'AI Estimated', cls: 'bg-amber-50 text-amber-700' },
+  imported: { label: 'Imported', cls: 'bg-sky-50 text-sky-800' }, // Health Connect / Apple Health
 };
 
 // Every data point shows where it came from and how confident we are (spec §F).
