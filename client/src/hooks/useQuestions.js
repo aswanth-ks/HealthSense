@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getQuestions, onDemoChange } from '../services/inputService.js';
 import { isDemo } from '../services/healthService.js';
-import { getSocket } from '../services/socket.js';
+import { onLive } from '../services/socket.js';
 
 // Open (or answered) adaptive questions; refreshes when the server pushes 'questions' events.
 export default function useQuestions(status = 'open') {
@@ -11,9 +11,7 @@ export default function useQuestions(status = 'open') {
   useEffect(() => {
     reload();
     if (isDemo()) return onDemoChange(reload);
-    const socket = getSocket();
-    socket?.on('questions', reload);
-    return () => socket?.off('questions', reload);
+    return onLive('questions', reload);
   }, [reload]);
 
   return { questions, reload };

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getLiveSnapshot, isDemo } from '../services/healthService.js';
-import { getSocket } from '../services/socket.js';
+import { onLive } from '../services/socket.js';
 
 const WAVE_LEN = 24;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -89,9 +89,16 @@ function useRealStream() {
       });
     });
 
-    const socket = getSocket();
-    const onReadings = ({ readings, device }) => setState((s) => applyReadings(s, readings, device));
-    socket?.on('readings', onReadings);
+    // Push (Socket.IO) when available; otherwise poll the latest snapshot every 5 s.
+    const onReadings = (payload) => {
+      if (payload?.readings) return setState((s) => applyReadings(s, payload.readings, payload.device));
+      return getLiveSnapshot().then((snap) => {
+        if (!alive || !snap) return;
+        const readings = Object.entries(snap.latest).map(([metric, r]) => ({ metric, ...r }));
+        setState((s) => (readings.some((r) => !s.lastPacket || new Date(r.ts) > s.lastPacket) ? applyReadings(s, readings, snap.device) : s));
+      }).catch(() => {});
+    };
+    const unsubscribe = onLive('readings', onReadings, 5_000);
 
     // Tick uptime + flip to "offline" if the device goes quiet
     uptimeRef.current = setInterval(() => {
@@ -104,7 +111,7 @@ function useRealStream() {
 
     return () => {
       alive = false;
-      socket?.off('readings', onReadings);
+      unsubscribe();
       clearInterval(uptimeRef.current);
     };
   }, []);

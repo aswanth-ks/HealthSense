@@ -1,5 +1,6 @@
 // Database side of the cycle + baseline engines.
 import mongoose from 'mongoose';
+import { waitUntil } from '@vercel/functions';
 import Reading from '../models/Reading.js';
 import Cycle from '../models/Cycle.js';
 import Baseline from '../models/Baseline.js';
@@ -17,6 +18,14 @@ const THROTTLE_MS = 30_000;
 /** Called after ingest. Runs at most every 30 s per user, always with a trailing run so no data is missed. */
 export function scheduleCycleUpdate(userId) {
   const key = String(userId);
+  // Serverless (Vercel): a timer would be frozen once the response is sent, so run now and keep the
+  // function alive until the analysis finishes. Throttle per warm instance to avoid redundant work.
+  if (process.env.VERCEL) {
+    if (Date.now() - (lastRun.get(key) || 0) < 10_000) return;
+    lastRun.set(key, Date.now());
+    waitUntil(updateCycles(userId).catch((e) => console.error('cycle update failed:', e.message)));
+    return;
+  }
   if (pending.has(key)) return;
   const wait = Math.max(2_000, THROTTLE_MS - (Date.now() - (lastRun.get(key) || 0)));
   pending.set(key, setTimeout(async () => {

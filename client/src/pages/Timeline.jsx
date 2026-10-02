@@ -4,7 +4,7 @@ import PageHeader from '../components/common/PageHeader.jsx';
 import Segmented from '../components/common/Segmented.jsx';
 import { getTimeline } from '../services/triageService.js';
 import { isDemo } from '../services/healthService.js';
-import { getSocket } from '../services/socket.js';
+import { onLive } from '../services/socket.js';
 import { useInput } from '../context/InputContext.jsx';
 
 const KIND = {
@@ -33,10 +33,9 @@ export default function Timeline() {
     const load = () => getTimeline(150).then(setEvents).catch(() => setEvents([]));
     load();
     if (isDemo()) return undefined;
-    const socket = getSocket();
-    socket?.on('triage', load);
-    socket?.on('questions', load);
-    return () => { socket?.off('triage', load); socket?.off('questions', load); };
+    const offTriage = onLive('triage', load);
+    const offQuestions = onLive('questions', load, 60_000);
+    return () => { offTriage(); offQuestions(); };
   }, [version]);
 
   const shown = (events || []).filter((e) => !FILTERS[filter] || FILTERS[filter].includes(e.kind));
