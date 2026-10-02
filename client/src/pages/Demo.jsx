@@ -1,3 +1,4 @@
+import Section from '../components/common/Section.jsx';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -94,49 +95,53 @@ export default function Demo() {
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-      <section>
-        <p className="eyebrow">Run in order</p>
-        <ol className="mt-3 space-y-3">
-          {STEPS.map((s, i) => (
-            <li key={s.id} className="card p-4 sm:p-5">
-              <div className="flex gap-3">
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${done[s.id] ? 'bg-brand-50 text-brand-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                  {done[s.id] ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-ink-mute">Step {i + 1}</p>
-                  <p className="font-medium">{s.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">{s.text}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={() => run(s.id)}
-                      disabled={!!busy}
-                      className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-                    >
-                      {busy === s.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-                      {busy === s.id ? 'Running…' : done[s.id] ? 'Run again' : 'Run'}
-                    </button>
-                    {done[s.id] && (
-                      <Link to={s.see[0]} className="flex items-center gap-1 rounded-xl border border-line px-3 py-2 text-xs text-ink-soft hover:bg-canvas">
-                        {s.see[1]} <ArrowRight size={13} />
-                      </Link>
-                    )}
+      <Section tone="indigo">
+        <section>
+          <p className="eyebrow">Run in order</p>
+          <ol className="mt-3 space-y-3">
+            {STEPS.map((s, i) => (
+              <li key={s.id} className="card p-4 sm:p-5">
+                <div className="flex gap-3">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${done[s.id] ? 'bg-brand-50 text-brand-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                    {done[s.id] ? <CheckCircle2 size={18} /> : <s.icon size={18} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-ink-mute">Step {i + 1}</p>
+                    <p className="font-medium">{s.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-ink-soft">{s.text}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => run(s.id)}
+                        disabled={!!busy}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {busy === s.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                        {busy === s.id ? 'Running…' : done[s.id] ? 'Run again' : 'Run'}
+                      </button>
+                      {done[s.id] && (
+                        <Link to={s.see[0]} className="flex items-center gap-1 rounded-xl border border-line px-3 py-2 text-xs text-ink-soft hover:bg-canvas">
+                          {s.see[1]} <ArrowRight size={13} />
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </Section>
 
-      <section className="card p-5">
-        <p className="font-medium">Then show the closed loop</p>
-        <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-ink-soft">
-          <li>Open <Link to="/alerts" className="text-brand-700 underline">Alerts &amp; Questions</Link> and answer <i>"Did you wake suddenly during sleep?"</i> → the triage level and confidence update.</li>
-          <li>Open <Link to="/insights" className="text-brand-700 underline">AI Insights</Link>: <b>Risk increased because…</b> and <b>previous cycle → learning → next-cycle monitoring priority</b>.</li>
-          <li>Open <Link to="/timeline" className="text-brand-700 underline">Timeline</Link>: what happened, when, and what changed.</li>
-        </ol>
-      </section>
+      <Section tone="violet" className="!p-2 sm:!p-3">
+        <section className="card p-5">
+          <p className="font-medium">Then show the closed loop</p>
+          <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-ink-soft">
+            <li>Open <Link to="/alerts" className="text-brand-700 underline">Alerts &amp; Questions</Link> and answer <i>"Did you wake suddenly during sleep?"</i> → the triage level and confidence update.</li>
+            <li>Open <Link to="/insights" className="text-brand-700 underline">AI Insights</Link>: <b>Risk increased because…</b> and <b>previous cycle → learning → next-cycle monitoring priority</b>.</li>
+            <li>Open <Link to="/timeline" className="text-brand-700 underline">Timeline</Link>: what happened, when, and what changed.</li>
+          </ol>
+        </section>
+      </Section>
 
       {log.length > 0 && (
         <section className="card p-5">

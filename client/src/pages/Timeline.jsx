@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Section from '../components/common/Section.jsx';
 import { CalendarHeart, GraduationCap, AlertTriangle, MessageCircleQuestion, MessageSquareReply, ShieldAlert, Target, ClipboardList, Watch, Info } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
 import Segmented from '../components/common/Segmented.jsx';
@@ -60,34 +61,36 @@ export default function Timeline() {
       {events === null && <p className="text-sm text-ink-soft">Loading…</p>}
       {events && !days.length && <p className="card p-6 text-sm text-ink-soft">No events yet. They appear as your watch sends data and the system learns your baseline.</p>}
 
-      <div className="space-y-6">
-        {days.map(({ day, items }) => (
-          <section key={day} className="grid gap-4 md:grid-cols-[140px_1fr]">
-            <div className="md:pt-4">
-              <p className="text-sm font-medium">{day}</p>
-              <p className="text-[11px] text-ink-mute">{items.length} event{items.length > 1 ? 's' : ''}</p>
-            </div>
-            <ol className="card relative divide-y divide-line">
-              {items.map((e) => {
-                const k = KIND[e.kind] || KIND.info;
-                return (
-                  <li key={e.id} className="flex gap-4 px-5 py-4">
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${k.cls}`}><k.icon size={17} /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium">{e.title}</p>
-                        <span className="rounded-full bg-canvas px-2 py-0.5 text-[10px] text-ink-mute">{k.label}</span>
+      <Section tone="indigo">
+        <div className="space-y-6">
+          {days.map(({ day, items }) => (
+            <section key={day} className="grid gap-4 md:grid-cols-[140px_1fr]">
+              <div className="md:pt-4">
+                <p className="text-sm font-medium">{day}</p>
+                <p className="text-[11px] text-ink-mute">{items.length} event{items.length > 1 ? 's' : ''}</p>
+              </div>
+              <ol className="card relative divide-y divide-line">
+                {items.map((e) => {
+                  const k = KIND[e.kind] || KIND.info;
+                  return (
+                    <li key={e.id} className="flex gap-4 px-5 py-4">
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${k.cls}`}><k.icon size={17} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium">{e.title}</p>
+                          <span className="rounded-full bg-canvas px-2 py-0.5 text-[10px] text-ink-mute">{k.label}</span>
+                        </div>
+                        {e.detail && <p className="mt-1 text-xs leading-relaxed text-ink-soft">{e.detail}</p>}
                       </div>
-                      {e.detail && <p className="mt-1 text-xs leading-relaxed text-ink-soft">{e.detail}</p>}
-                    </div>
-                    <span className="shrink-0 text-[11px] text-ink-mute">{time(e.ts)}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        ))}
-      </div>
+                      <span className="shrink-0 text-[11px] text-ink-mute">{time(e.ts)}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }

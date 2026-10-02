@@ -1,3 +1,4 @@
+import Section from '../components/common/Section.jsx';
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, CheckCircle2, Info } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
@@ -95,78 +96,86 @@ export default function Settings() {
     <form onSubmit={save} className="space-y-8">
       <PageHeader eyebrow="Preferences" title="Settings" subtitle="Your profile, medical background and monitoring preferences." right={saveButton} />
 
-      <Card eyebrow="Account" title="Patient profile">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Full name"><input required className={input} value={form.name} onChange={set('name')} /></Field>
-          <Field label="Email" hint="Sign-in email"><input className={input} value={form.email} disabled /></Field>
-          <Field label="Date of birth"><input type="date" className={input} value={form.dob} onChange={set('dob')} /></Field>
-          <Field label="Sex">
-            <select className={input} value={form.sex} onChange={set('sex')}>
-              <option value="">Prefer not to say</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option>
-            </select>
-          </Field>
-          <Field label="Height (cm)"><input type="number" min="50" max="250" className={input} value={form.heightCm} onChange={set('heightCm')} /></Field>
-          <Field label="Weight (kg)"><input type="number" min="20" max="300" className={input} value={form.weightKg} onChange={set('weightKg')} /></Field>
-        </div>
-      </Card>
-
-      <Card
-        eyebrow="Background"
-        title="Medical history"
-        action={
-          <button type="button" onClick={() => setForm((f) => ({ ...f, history: [...f.history, { condition: '', since: '', notes: '' }] }))} className="flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-xs text-ink-soft hover:bg-brand-50/60">
-            <Plus size={14} /> Add condition
-          </button>
-        }
-      >
-        {form.history.length === 0 ? (
-          <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-ink-soft">No conditions added. Adding relevant history (e.g. asthma, hypertension, diagnosed sleep problems) helps put your readings in context.</p>
-        ) : (
-          <ul className="space-y-3">
-            {form.history.map((h, i) => (
-              <li key={i} className="grid items-end gap-3 rounded-xl border border-line p-3 sm:grid-cols-[1.4fr_0.7fr_1.6fr_auto]">
-                <Field label="Condition"><input className={input} placeholder="e.g. Asthma" value={h.condition} onChange={setHistory(i, 'condition')} /></Field>
-                <Field label="Since"><input className={input} placeholder="e.g. 2019" value={h.since} onChange={setHistory(i, 'since')} /></Field>
-                <Field label="Notes"><input className={input} placeholder="Medication, severity…" value={h.notes} onChange={setHistory(i, 'notes')} /></Field>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, history: f.history.filter((_, j) => j !== i) }))} aria-label="Remove" className="mb-1 rounded-lg p-2 text-ink-mute hover:bg-red-50 hover:text-red-600">
-                  <Trash2 size={16} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <HealthTrackingCard />
-
-        <Card eyebrow="Monitoring" title="Configured ranges">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Heart rate min (BPM)"><input type="number" className={input} value={form.ranges.hrMin} onChange={setRange('hrMin')} /></Field>
-            <Field label="Heart rate max (BPM)"><input type="number" className={input} value={form.ranges.hrMax} onChange={setRange('hrMax')} /></Field>
-            <Field label="Blood oxygen min (%)"><input type="number" className={input} value={form.ranges.spo2Min} onChange={setRange('spo2Min')} /></Field>
-            <div className="hidden sm:block" />
-            <Field label="Temperature min (°C)"><input type="number" step="0.1" className={input} value={form.ranges.tempMin} onChange={setRange('tempMin')} /></Field>
-            <Field label="Temperature max (°C)"><input type="number" step="0.1" className={input} value={form.ranges.tempMax} onChange={setRange('tempMax')} /></Field>
+      <Section tone="sky" className="!p-2 sm:!p-3">
+        <Card eyebrow="Account" title="Patient profile">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Full name"><input required className={input} value={form.name} onChange={set('name')} /></Field>
+            <Field label="Email" hint="Sign-in email"><input className={input} value={form.email} disabled /></Field>
+            <Field label="Date of birth"><input type="date" className={input} value={form.dob} onChange={set('dob')} /></Field>
+            <Field label="Sex">
+              <select className={input} value={form.sex} onChange={set('sex')}>
+                <option value="">Prefer not to say</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option>
+              </select>
+            </Field>
+            <Field label="Height (cm)"><input type="number" min="50" max="250" className={input} value={form.heightCm} onChange={set('heightCm')} /></Field>
+            <Field label="Weight (kg)"><input type="number" min="20" max="300" className={input} value={form.weightKg} onChange={set('weightKg')} /></Field>
           </div>
-          <p className="mt-4 flex gap-1.5 text-[11px] text-ink-mute"><Info size={12} className="mt-0.5 shrink-0" /> Used for "in range" checks. Your personal baseline is learned separately from your data.</p>
         </Card>
-      </div>
+      </Section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card eyebrow="Alerts" title="Notifications">
-          <ul className="divide-y divide-line border-t border-line">
-            {[['push', 'Push notifications'], ['email', 'Email alerts'], ['summary', 'Daily summary']].map(([k, l]) => (
-              <li key={k} className="flex items-center justify-between py-4 text-sm">
-                {l}
-                <Toggle checked={prefs[k]} onChange={(v) => setPrefs({ ...prefs, [k]: v })} label={l} />
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-ink-mute">Saved on this device.</p>
+      <Section tone="sky" className="!p-2 sm:!p-3">
+        <Card
+          eyebrow="Background"
+          title="Medical history"
+          action={
+            <button type="button" onClick={() => setForm((f) => ({ ...f, history: [...f.history, { condition: '', since: '', notes: '' }] }))} className="flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-xs text-ink-soft hover:bg-brand-50/60">
+              <Plus size={14} /> Add condition
+            </button>
+          }
+        >
+          {form.history.length === 0 ? (
+            <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-ink-soft">No conditions added. Adding relevant history (e.g. asthma, hypertension, diagnosed sleep problems) helps put your readings in context.</p>
+          ) : (
+            <ul className="space-y-3">
+              {form.history.map((h, i) => (
+                <li key={i} className="grid items-end gap-3 rounded-xl border border-line p-3 sm:grid-cols-[1.4fr_0.7fr_1.6fr_auto]">
+                  <Field label="Condition"><input className={input} placeholder="e.g. Asthma" value={h.condition} onChange={setHistory(i, 'condition')} /></Field>
+                  <Field label="Since"><input className={input} placeholder="e.g. 2019" value={h.since} onChange={setHistory(i, 'since')} /></Field>
+                  <Field label="Notes"><input className={input} placeholder="Medication, severity…" value={h.notes} onChange={setHistory(i, 'notes')} /></Field>
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, history: f.history.filter((_, j) => j !== i) }))} aria-label="Remove" className="mb-1 rounded-lg p-2 text-ink-mute hover:bg-red-50 hover:text-red-600">
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
+      </Section>
 
-      </div>
+      <Section tone="teal">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <HealthTrackingCard />
+
+          <Card eyebrow="Monitoring" title="Configured ranges">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Heart rate min (BPM)"><input type="number" className={input} value={form.ranges.hrMin} onChange={setRange('hrMin')} /></Field>
+              <Field label="Heart rate max (BPM)"><input type="number" className={input} value={form.ranges.hrMax} onChange={setRange('hrMax')} /></Field>
+              <Field label="Blood oxygen min (%)"><input type="number" className={input} value={form.ranges.spo2Min} onChange={setRange('spo2Min')} /></Field>
+              <div className="hidden sm:block" />
+              <Field label="Temperature min (°C)"><input type="number" step="0.1" className={input} value={form.ranges.tempMin} onChange={setRange('tempMin')} /></Field>
+              <Field label="Temperature max (°C)"><input type="number" step="0.1" className={input} value={form.ranges.tempMax} onChange={setRange('tempMax')} /></Field>
+            </div>
+            <p className="mt-4 flex gap-1.5 text-[11px] text-ink-mute"><Info size={12} className="mt-0.5 shrink-0" /> Used for "in range" checks. Your personal baseline is learned separately from your data.</p>
+          </Card>
+        </div>
+      </Section>
+
+      <Section tone="slate">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Card eyebrow="Alerts" title="Notifications">
+            <ul className="divide-y divide-line border-t border-line">
+              {[['push', 'Push notifications'], ['email', 'Email alerts'], ['summary', 'Daily summary']].map(([k, l]) => (
+                <li key={k} className="flex items-center justify-between py-4 text-sm">
+                  {l}
+                  <Toggle checked={prefs[k]} onChange={(v) => setPrefs({ ...prefs, [k]: v })} label={l} />
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[11px] text-ink-mute">Saved on this device.</p>
+          </Card>
+
+        </div>
+      </Section>
 
       <div className="flex justify-end">{saveButton}</div>
     </form>

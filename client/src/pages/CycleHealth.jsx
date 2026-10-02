@@ -1,3 +1,4 @@
+import Section from '../components/common/Section.jsx';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
@@ -103,97 +104,105 @@ export default function CycleHealth() {
       />
 
       {/* Current context: observed vs estimated, always labelled */}
-      <Card eyebrow="Current cycle" title={c.known ? (c.cycleDay ? `Cycle day ${c.cycleDay}` : 'Cycle day uncertain') : 'No period recorded yet'}>
-        {c.known ? (
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
-            <Stat label="Period status" sub={<Provenance source={c.period?.source} />}>{PERIOD_LABEL[c.period?.status] || '—'}</Stat>
-            <Stat label="Last period started" sub={<Provenance source={c.startSource} confidence={c.dayConfidence} />}>{fmtDay(c.lastPeriodStart)}</Stat>
-            <Stat label="Expected next period" sub={<Provenance source={c.nextPeriod?.source} confidence={c.nextPeriod?.confidence} />}>{fmtDay(c.nextPeriod?.date)} <span className="text-xs font-normal text-ink-mute">±{c.nextPeriod?.windowDays}d</span></Stat>
-            <Stat label="Typical cycle length" sub={<Provenance source={c.length?.source} confidence={c.length?.confidence} />}>{c.length?.days} days</Stat>
-            <Stat label="Regularity" sub={<Provenance source={c.regularity?.source} />}>{REGULARITY_LABEL[c.regularity?.value] || '—'}{c.regularity?.variabilityDays != null && <span className="text-xs font-normal text-ink-mute"> (±{c.regularity.variabilityDays}d)</span>}</Stat>
-            <Stat label="Estimated phase" sub={c.phase && <Provenance source="ai_estimated" confidence={c.phase.confidence} />}><span className="capitalize">{c.phase?.name || 'Not estimated'}</span></Stat>
-          </div>
-        ) : <p className="text-sm text-ink-soft">{c.message}</p>}
-        <p className="mt-3 text-[11px] text-ink-mute">Expected dates and phases are estimates, never confirmed dates. {PHASE_HINT}</p>
-      </Card>
+      <Section tone="rose" className="!p-2 sm:!p-3">
+        <Card eyebrow="Current cycle" title={c.known ? (c.cycleDay ? `Cycle day ${c.cycleDay}` : 'Cycle day uncertain') : 'No period recorded yet'}>
+          {c.known ? (
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
+              <Stat label="Period status" sub={<Provenance source={c.period?.source} />}>{PERIOD_LABEL[c.period?.status] || '—'}</Stat>
+              <Stat label="Last period started" sub={<Provenance source={c.startSource} confidence={c.dayConfidence} />}>{fmtDay(c.lastPeriodStart)}</Stat>
+              <Stat label="Expected next period" sub={<Provenance source={c.nextPeriod?.source} confidence={c.nextPeriod?.confidence} />}>{fmtDay(c.nextPeriod?.date)} <span className="text-xs font-normal text-ink-mute">±{c.nextPeriod?.windowDays}d</span></Stat>
+              <Stat label="Typical cycle length" sub={<Provenance source={c.length?.source} confidence={c.length?.confidence} />}>{c.length?.days} days</Stat>
+              <Stat label="Regularity" sub={<Provenance source={c.regularity?.source} />}>{REGULARITY_LABEL[c.regularity?.value] || '—'}{c.regularity?.variabilityDays != null && <span className="text-xs font-normal text-ink-mute"> (±{c.regularity.variabilityDays}d)</span>}</Stat>
+              <Stat label="Estimated phase" sub={c.phase && <Provenance source="ai_estimated" confidence={c.phase.confidence} />}><span className="capitalize">{c.phase?.name || 'Not estimated'}</span></Stat>
+            </div>
+          ) : <p className="text-sm text-ink-soft">{c.message}</p>}
+          <p className="mt-3 text-[11px] text-ink-mute">Expected dates and phases are estimates, never confirmed dates. {PHASE_HINT}</p>
+        </Card>
+      </Section>
 
       {/* Recurring patterns across cycles */}
-      <Card eyebrow="Across cycles" title="Recurring patterns">
-        {p?.detected ? (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3">
-            <p className="flex items-center gap-2 text-sm font-medium text-amber-900"><Repeat size={15} /> Recurring cycle-associated symptom pattern detected</p>
-            <p className="mt-1 text-xs text-amber-900/90">{p.summary}</p>
-            <p className="mt-1.5 text-[11px] text-amber-900/80">{p.statement}</p>
-          </div>
-        ) : (
-          <p className="mb-4 text-sm text-ink-soft">No recurring pattern across cycles yet. Patterns need at least two cycles with recorded symptoms.</p>
-        )}
-        {chart.length > 0 && (
-          <>
-            <p className="mb-2 text-xs text-ink-mute">Cycle days 1–3 compared across your recent cycles</p>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chart} margin={{ top: 6, right: -8, left: -24, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#e4ebe9" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="s" domain={[0, 10]} tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="p" orientation="right" domain={[0, 100]} unit="%" tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e4ebe9', fontSize: 12 }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar yAxisId="s" dataKey="pain" name="Max pain (0–10)" fill="#f43f5e" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar yAxisId="s" dataKey="fatigue" name="Max fatigue (0–10)" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                  <Bar yAxisId="p" dataKey="drop" name="Activity drop (%)" fill="#6b7fd7" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                </BarChart>
-              </ResponsiveContainer>
+      <Section tone="amber" className="!p-2 sm:!p-3">
+        <Card eyebrow="Across cycles" title="Recurring patterns">
+          {p?.detected ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-medium text-amber-900"><Repeat size={15} /> Recurring cycle-associated symptom pattern detected</p>
+              <p className="mt-1 text-xs text-amber-900/90">{p.summary}</p>
+              <p className="mt-1.5 text-[11px] text-amber-900/80">{p.statement}</p>
             </div>
-            <ul className="mt-3 divide-y divide-line text-xs sm:hidden">
-              {p.perCycle.map((x) => <li key={x.index} className="py-2">Cycle {fmtDay(x.startDate)}: pain {x.pain}/10, fatigue {x.fatigue}/10{x.activityDropPct != null ? `, activity −${Math.max(0, x.activityDropPct)}%` : ''}{x.sleepHours != null ? `, sleep ${x.sleepHours} h` : ''}</li>)}
-            </ul>
-          </>
-        )}
-      </Card>
+          ) : (
+            <p className="mb-4 text-sm text-ink-soft">No recurring pattern across cycles yet. Patterns need at least two cycles with recorded symptoms.</p>
+          )}
+          {chart.length > 0 && (
+            <>
+              <p className="mb-2 text-xs text-ink-mute">Cycle days 1–3 compared across your recent cycles</p>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chart} margin={{ top: 6, right: -8, left: -24, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="#e4ebe9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="s" domain={[0, 10]} tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="p" orientation="right" domain={[0, 100]} unit="%" tick={{ fontSize: 10, fill: '#8a9895' }} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e4ebe9', fontSize: 12 }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar yAxisId="s" dataKey="pain" name="Max pain (0–10)" fill="#f43f5e" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    <Bar yAxisId="s" dataKey="fatigue" name="Max fatigue (0–10)" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                    <Bar yAxisId="p" dataKey="drop" name="Activity drop (%)" fill="#6b7fd7" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="mt-3 divide-y divide-line text-xs sm:hidden">
+                {p.perCycle.map((x) => <li key={x.index} className="py-2">Cycle {fmtDay(x.startDate)}: pain {x.pain}/10, fatigue {x.fatigue}/10{x.activityDropPct != null ? `, activity −${Math.max(0, x.activityDropPct)}%` : ''}{x.sleepHours != null ? `, sleep ${x.sleepHours} h` : ''}</li>)}
+              </ul>
+            </>
+          )}
+        </Card>
+      </Section>
 
       {/* Cycle-aware baseline */}
-      <Card eyebrow="Personal baseline" title="Cycle-aware baseline">
-        {contexts.length ? (
-          <ul className="divide-y divide-line">
-            {contexts.map(({ metric, inP, out }) => (
-              <li key={metric} className="grid grid-cols-1 gap-1 py-3 text-sm sm:grid-cols-[1.2fr_1fr_1fr]">
-                <span className="font-medium">{METRIC[metric] || metric}</span>
-                <span className="text-ink-soft">Days 1–3: {inP ? <><b className="text-ink">{inP.range.lo}–{inP.range.hi}</b> <span className="text-[11px] text-ink-mute">({Math.round(inP.confidence * 100)}% · {inP.cyclesUsed} cycles)</span></> : <span className="text-ink-mute">not enough data</span>}</span>
-                <span className="text-ink-soft">Outside period: {out ? <><b className="text-ink">{out.range.lo}–{out.range.hi}</b> <span className="text-[11px] text-ink-mute">({Math.round(out.confidence * 100)}%)</span></> : <span className="text-ink-mute">not enough data</span>}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-ink-soft">Cycle-specific baselines appear once at least two cycles with monitoring data are recorded. Until then your general baseline is used.</p>
-        )}
-        <p className="mt-3 text-[11px] text-ink-mute">Every body is different: changes during your cycle are compared with <i>your</i> usual pattern for that part of the cycle, not with a universal threshold.</p>
-      </Card>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card eyebrow="History" title="Recorded cycles">
-          {data.cycles.length ? <ul className="-mx-4 divide-y divide-line sm:-mx-6">{data.cycles.map((x) => <CycleRow key={x.id} c={x} onChanged={changed} />)}</ul>
-            : <p className="text-sm text-ink-soft">No cycles recorded yet.</p>}
-        </Card>
-
-        <Card eyebrow="Entries" title="Cycle symptoms (90 days)">
-          {data.symptoms.length ? (
-            <ul className="-mx-4 max-h-96 divide-y divide-line overflow-y-auto sm:-mx-6">
-              {data.symptoms.map((s) => (
-                <li key={s.id} className="flex items-center gap-3 px-4 py-2.5 text-sm sm:px-6">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{s.symptom === 'custom' ? s.label : SYM[s.symptom] || s.symptom}{s.severity != null && <span className="font-normal text-ink-soft"> · {s.severity}/10</span>}{s.flow && <span className="font-normal text-ink-soft"> · {s.flow}</span>}{s.activityImpact && <span className="font-normal text-ink-soft"> · {s.activityImpact}</span>}</p>
-                    <p className="text-[11px] text-ink-mute">{new Date(s.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
-                  </div>
-                  <Provenance source={s.source} />
-                  <button onClick={async () => { await deleteCycleSymptom(s.id); changed(); }} aria-label="Delete entry" className="rounded-lg p-1.5 text-ink-mute hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+      <Section tone="teal" className="!p-2 sm:!p-3">
+        <Card eyebrow="Personal baseline" title="Cycle-aware baseline">
+          {contexts.length ? (
+            <ul className="divide-y divide-line">
+              {contexts.map(({ metric, inP, out }) => (
+                <li key={metric} className="grid grid-cols-1 gap-1 py-3 text-sm sm:grid-cols-[1.2fr_1fr_1fr]">
+                  <span className="font-medium">{METRIC[metric] || metric}</span>
+                  <span className="text-ink-soft">Days 1–3: {inP ? <><b className="text-ink">{inP.range.lo}–{inP.range.hi}</b> <span className="text-[11px] text-ink-mute">({Math.round(inP.confidence * 100)}% · {inP.cyclesUsed} cycles)</span></> : <span className="text-ink-mute">not enough data</span>}</span>
+                  <span className="text-ink-soft">Outside period: {out ? <><b className="text-ink">{out.range.lo}–{out.range.hi}</b> <span className="text-[11px] text-ink-mute">({Math.round(out.confidence * 100)}%)</span></> : <span className="text-ink-mute">not enough data</span>}</span>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-ink-soft">No cycle symptoms recorded.</p>}
+          ) : (
+            <p className="text-sm text-ink-soft">Cycle-specific baselines appear once at least two cycles with monitoring data are recorded. Until then your general baseline is used.</p>
+          )}
+          <p className="mt-3 text-[11px] text-ink-mute">Every body is different: changes during your cycle are compared with <i>your</i> usual pattern for that part of the cycle, not with a universal threshold.</p>
         </Card>
-      </div>
+      </Section>
+
+      <Section tone="slate">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Card eyebrow="History" title="Recorded cycles">
+            {data.cycles.length ? <ul className="-mx-4 divide-y divide-line sm:-mx-6">{data.cycles.map((x) => <CycleRow key={x.id} c={x} onChanged={changed} />)}</ul>
+              : <p className="text-sm text-ink-soft">No cycles recorded yet.</p>}
+          </Card>
+
+          <Card eyebrow="Entries" title="Cycle symptoms (90 days)">
+            {data.symptoms.length ? (
+              <ul className="-mx-4 max-h-96 divide-y divide-line overflow-y-auto sm:-mx-6">
+                {data.symptoms.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 px-4 py-2.5 text-sm sm:px-6">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{s.symptom === 'custom' ? s.label : SYM[s.symptom] || s.symptom}{s.severity != null && <span className="font-normal text-ink-soft"> · {s.severity}/10</span>}{s.flow && <span className="font-normal text-ink-soft"> · {s.flow}</span>}{s.activityImpact && <span className="font-normal text-ink-soft"> · {s.activityImpact}</span>}</p>
+                      <p className="text-[11px] text-ink-mute">{new Date(s.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                    </div>
+                    <Provenance source={s.source} />
+                    <button onClick={async () => { await deleteCycleSymptom(s.id); changed(); }} aria-label="Delete entry" className="rounded-lg p-1.5 text-ink-mute hover:bg-red-50 hover:text-red-600"><Trash2 size={15} /></button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm text-ink-soft">No cycle symptoms recorded.</p>}
+          </Card>
+        </div>
+      </Section>
 
       <section className="card flex flex-wrap items-start gap-3 p-5 text-xs text-ink-soft">
         <Lock size={15} className="mt-0.5 shrink-0" />

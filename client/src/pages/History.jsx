@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Section from '../components/common/Section.jsx';
 import { Download, CheckCircle2, AlertCircle } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader.jsx';
 import Segmented from '../components/common/Segmented.jsx';
@@ -53,101 +54,105 @@ export default function History() {
         }
       />
 
-      <section className="card grid gap-6 p-6 sm:grid-cols-3">
-        {[
-          [Array.isArray(cycles) ? cycles.length : '—', 'Monitoring cycles'],
-          [avgCompleteness == null ? '—' : `${avgCompleteness}%`, 'Avg data completeness'],
-          [readings.total.toLocaleString(), 'Vital readings recorded'],
-        ].map(([v, l]) => (
-          <div key={l}>
-            <p className="text-2xl font-medium text-brand-700">{v}</p>
-            <p className="mt-2 text-xs text-ink-mute">{l}</p>
-          </div>
-        ))}
-      </section>
+      <Section tone="teal" className="!p-2 sm:!p-3">
+        <section className="card grid gap-6 p-6 sm:grid-cols-3">
+          {[
+            [Array.isArray(cycles) ? cycles.length : '—', 'Monitoring cycles'],
+            [avgCompleteness == null ? '—' : `${avgCompleteness}%`, 'Avg data completeness'],
+            [readings.total.toLocaleString(), 'Vital readings recorded'],
+          ].map(([v, l]) => (
+            <div key={l}>
+              <p className="text-2xl font-medium text-brand-700">{v}</p>
+              <p className="mt-2 text-xs text-ink-mute">{l}</p>
+            </div>
+          ))}
+        </section>
+      </Section>
 
       <div className="flex justify-start">
         <Segmented options={['Cycles', 'Readings']} value={view} onChange={setView} />
       </div>
 
-      {view === 'Cycles' ? (
-        <section>
-          <div className="mb-5">
-            <p className="eyebrow">24-hour monitoring</p>
-            <h2 className="mt-2 text-xl font-medium">Monitoring Cycles</h2>
-            <p className="mt-1 text-xs text-ink-mute">Each cycle covers one day. Tap a cycle to see its full 24-hour timeline.</p>
-          </div>
-          <div className="space-y-4">
-            {cycles === null && <p className="text-sm text-ink-soft">Loading…</p>}
-            {cycles === 'error' && <ConnectionUnavailable />}
-            {Array.isArray(cycles) && cycles.length === 0 && <p className="card p-6 text-sm text-ink-soft">No cycles yet. Cycles are created automatically once your watch or the simulator sends data.</p>}
-            {Array.isArray(cycles) && cycles.map((c) => <CycleCard key={c.id} cycle={c} />)}
-          </div>
-        </section>
-      ) : (
-        <section>
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="eyebrow">Measurement log</p>
-              <h2 className="mt-2 text-xl font-medium">Recorded Readings</h2>
+      <Section tone="indigo">
+        {view === 'Cycles' ? (
+          <section>
+            <div className="mb-5">
+              <p className="eyebrow">24-hour monitoring</p>
+              <h2 className="mt-2 text-xl font-medium">Monitoring Cycles</h2>
+              <p className="mt-1 text-xs text-ink-mute">Each cycle covers one day. Tap a cycle to see its full 24-hour timeline.</p>
             </div>
-            <Segmented options={Object.keys(FILTERS)} value={filter} onChange={(f) => { setFilter(f); setPage(0); }} />
-          </div>
+            <div className="space-y-4">
+              {cycles === null && <p className="text-sm text-ink-soft">Loading…</p>}
+              {cycles === 'error' && <ConnectionUnavailable />}
+              {Array.isArray(cycles) && cycles.length === 0 && <p className="card p-6 text-sm text-ink-soft">No cycles yet. Cycles are created automatically once your watch or the simulator sends data.</p>}
+              {Array.isArray(cycles) && cycles.map((c) => <CycleCard key={c.id} cycle={c} />)}
+            </div>
+          </section>
+        ) : (
+          <section>
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="eyebrow">Measurement log</p>
+                <h2 className="mt-2 text-xl font-medium">Recorded Readings</h2>
+              </div>
+              <Segmented options={Object.keys(FILTERS)} value={filter} onChange={(f) => { setFilter(f); setPage(0); }} />
+            </div>
 
-          <ul className="card divide-y divide-line sm:hidden">
-            {readings.items.map((r) => (
-              <li key={r.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{r.name}</p>
-                  <p className="text-[11px] text-ink-mute">{fmt(r.ts)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{r.value} <span className="text-[11px] font-normal text-ink-mute">{r.unit}</span></p>
-                  <div className="mt-0.5 flex items-center justify-end gap-1.5">
-                    {!r.inRange && <AlertCircle size={12} className="text-amber-600" />}
-                    <SourceBadge source={r.source} confidence={r.confidence} />
+            <ul className="card divide-y divide-line sm:hidden">
+              {readings.items.map((r) => (
+                <li key={r.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{r.name}</p>
+                    <p className="text-[11px] text-ink-mute">{fmt(r.ts)}</p>
                   </div>
-                </div>
-              </li>
-            ))}
-            {!readings.items.length && <li className="px-4 py-8 text-center text-sm text-ink-soft">No readings recorded yet.</li>}
-          </ul>
-          <div className="card hidden overflow-x-auto sm:block">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-line text-[11px] uppercase tracking-wider text-ink-mute">
-                  {['Time', 'Parameter', 'Value', 'Status', 'Source'].map((h) => <th key={h} className="px-6 py-4 font-medium">{h}</th>)}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {readings.items.map((r) => (
-                  <tr key={r.id} className="hover:bg-brand-50/30">
-                    <td className="px-6 py-3.5 text-ink-soft">{fmt(r.ts)}</td>
-                    <td className="px-6 py-3.5 font-medium">{r.name}</td>
-                    <td className="px-6 py-3.5">{r.value} <span className="text-xs text-ink-mute">{r.unit}</span></td>
-                    <td className="px-6 py-3.5">
-                      {r.inRange
-                        ? <span className="flex items-center gap-1.5 text-xs text-brand-700"><CheckCircle2 size={14} /> In range</span>
-                        : <span className="flex items-center gap-1.5 text-xs text-amber-700"><AlertCircle size={14} /> Out of range</span>}
-                    </td>
-                    <td className="px-6 py-3.5"><SourceBadge source={r.source} confidence={r.confidence} /></td>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{r.value} <span className="text-[11px] font-normal text-ink-mute">{r.unit}</span></p>
+                    <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                      {!r.inRange && <AlertCircle size={12} className="text-amber-600" />}
+                      <SourceBadge source={r.source} confidence={r.confidence} />
+                    </div>
+                  </div>
+                </li>
+              ))}
+              {!readings.items.length && <li className="px-4 py-8 text-center text-sm text-ink-soft">No readings recorded yet.</li>}
+            </ul>
+            <div className="card hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line text-[11px] uppercase tracking-wider text-ink-mute">
+                    {['Time', 'Parameter', 'Value', 'Status', 'Source'].map((h) => <th key={h} className="px-6 py-4 font-medium">{h}</th>)}
                   </tr>
-                ))}
-                {!readings.items.length && (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-ink-soft">No readings recorded yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs text-ink-mute">
-            <span>{readings.total ? `${page * PAGE + 1}–${Math.min((page + 1) * PAGE, readings.total)} of ${readings.total.toLocaleString()}` : '—'}</span>
-            <div className="flex gap-2">
-              <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Previous</button>
-              <button disabled={page >= pages - 1} onClick={() => setPage(page + 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Next</button>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {readings.items.map((r) => (
+                    <tr key={r.id} className="hover:bg-brand-50/30">
+                      <td className="px-6 py-3.5 text-ink-soft">{fmt(r.ts)}</td>
+                      <td className="px-6 py-3.5 font-medium">{r.name}</td>
+                      <td className="px-6 py-3.5">{r.value} <span className="text-xs text-ink-mute">{r.unit}</span></td>
+                      <td className="px-6 py-3.5">
+                        {r.inRange
+                          ? <span className="flex items-center gap-1.5 text-xs text-brand-700"><CheckCircle2 size={14} /> In range</span>
+                          : <span className="flex items-center gap-1.5 text-xs text-amber-700"><AlertCircle size={14} /> Out of range</span>}
+                      </td>
+                      <td className="px-6 py-3.5"><SourceBadge source={r.source} confidence={r.confidence} /></td>
+                    </tr>
+                  ))}
+                  {!readings.items.length && (
+                    <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-ink-soft">No readings recorded yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </section>
-      )}
+            <div className="mt-3 flex items-center justify-between gap-3 px-1 text-xs text-ink-mute">
+              <span>{readings.total ? `${page * PAGE + 1}–${Math.min((page + 1) * PAGE, readings.total)} of ${readings.total.toLocaleString()}` : '—'}</span>
+              <div className="flex gap-2">
+                <button disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Previous</button>
+                <button disabled={page >= pages - 1} onClick={() => setPage(page + 1)} className="rounded-lg border border-line bg-white px-3 py-2 disabled:opacity-40">Next</button>
+              </div>
+            </div>
+          </section>
+        )}
+      </Section>
     </div>
   );
 }

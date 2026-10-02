@@ -1,3 +1,4 @@
+import Section from '../components/common/Section.jsx';
 import { Link } from 'react-router-dom';
 import {
   BarChart3, Clock, AlertCircle, Watch, Settings, FlaskConical, Download, LogOut, ChevronRight, ShieldCheck, Smartphone, Share, CheckCircle2, CalendarHeart,
@@ -46,38 +47,42 @@ export default function Profile() {
         <ChevronRight size={18} className="text-indigo-400" />
       </Link>
 
-      <section className="card divide-y divide-line overflow-hidden">
-        <Row to="/alerts" icon={AlertCircle} label="Alerts & Questions" hint="Questions the system needs answered" badge={questions?.length || 0} tint="bg-red-50 text-red-500" />
-        {user?.cycle?.tracking && <Row to="/cycle" icon={CalendarHeart} label="Cycle & Health" hint="Cycle context, patterns and cycle-aware baseline" tint="bg-rose-50 text-rose-500" />}
-        <Row to="/trends" icon={BarChart3} label="Health Trends" hint="Your vitals against your personal baseline" tint="bg-brand-50 text-brand-600" />
-        <Row to="/history" icon={Clock} label="History" hint="24-hour monitoring cycles and readings" tint="bg-blue-50 text-blue-600" />
-        <Row to="/watch" icon={Watch} label="My Watch" hint="Device status and connection" tint="bg-amber-50 text-amber-600" />
-        <Row to="/settings" icon={Settings} label="Settings" hint="Profile, medical history, cycle tracking, ranges" />
-      </section>
+      <Section tone="slate" className="!p-2 sm:!p-3">
+        <section className="card divide-y divide-line overflow-hidden">
+          <Row to="/alerts" icon={AlertCircle} label="Alerts & Questions" hint="Questions the system needs answered" badge={questions?.length || 0} tint="bg-red-50 text-red-500" />
+          {user?.cycle?.tracking && <Row to="/cycle" icon={CalendarHeart} label="Cycle & Health" hint="Cycle context, patterns and cycle-aware baseline" tint="bg-rose-50 text-rose-500" />}
+          <Row to="/trends" icon={BarChart3} label="Health Trends" hint="Your vitals against your personal baseline" tint="bg-brand-50 text-brand-600" />
+          <Row to="/history" icon={Clock} label="History" hint="24-hour monitoring cycles and readings" tint="bg-blue-50 text-blue-600" />
+          <Row to="/watch" icon={Watch} label="My Watch" hint="Device status and connection" tint="bg-amber-50 text-amber-600" />
+          <Row to="/settings" icon={Settings} label="Settings" hint="Profile, medical history, cycle tracking, ranges" />
+        </section>
+      </Section>
 
       {/* Install */}
-      <section className="card p-5">
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600"><Smartphone size={17} /></span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">HealthSense app</p>
-            {installed ? (
-              <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-700"><CheckCircle2 size={13} /> Installed — you're using the app.</p>
-            ) : canInstall ? (
-              <>
-                <p className="mt-1 text-xs text-ink-soft">Add HealthSense to your home screen and open it like an app.</p>
-                <button onClick={install} className="mt-3 flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700">
-                  <Download size={14} /> Install HealthSense
-                </button>
-              </>
-            ) : isIOS ? (
-              <p className="mt-1 text-xs text-ink-soft">On iPhone: tap <Share size={12} className="inline" /> <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
-            ) : (
-              <p className="mt-1 text-xs text-ink-soft">Open this site in Chrome on your phone and choose <b>Install app</b> (or <b>Add to Home screen</b>) from the browser menu.</p>
-            )}
+      <Section tone="sky" className="!p-2 sm:!p-3">
+        <section className="card p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600"><Smartphone size={17} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">HealthSense app</p>
+              {installed ? (
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-700"><CheckCircle2 size={13} /> Installed — you're using the app.</p>
+              ) : canInstall ? (
+                <>
+                  <p className="mt-1 text-xs text-ink-soft">Add HealthSense to your home screen and open it like an app.</p>
+                  <button onClick={install} className="mt-3 flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-medium text-white hover:bg-brand-700">
+                    <Download size={14} /> Install HealthSense
+                  </button>
+                </>
+              ) : isIOS ? (
+                <p className="mt-1 text-xs text-ink-soft">On iPhone: tap <Share size={12} className="inline" /> <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
+              ) : (
+                <p className="mt-1 text-xs text-ink-soft">Open this site in Chrome on your phone and choose <b>Install app</b> (or <b>Add to Home screen</b>) from the browser menu.</p>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </Section>
 
       <p className="flex gap-2 px-1 text-[11px] leading-relaxed text-ink-mute">
         <ShieldCheck size={14} className="mt-0.5 shrink-0" />

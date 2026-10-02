@@ -1,3 +1,4 @@
+import Section from '../components/common/Section.jsx';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -131,98 +132,108 @@ export default function AIInsights() {
       </Link>
 
       {/* 2. Closed loop */}
-      <ClosedLoopCard loop={tri?.loop} />
+      <Section tone="indigo" className="!p-2 sm:!p-3">
+        <ClosedLoopCard loop={tri?.loop} />
+      </Section>
 
       {/* 3. Modules */}
-      <section>
-        <SectionTitle
-          eyebrow="Step 1 · Patterns"
-          title="What the monitoring modules found"
-          right={<button onClick={() => openCheckin()} className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs text-ink-soft hover:bg-brand-50/60"><ClipboardCheck size={14} /> Add symptoms</button>}
-        />
-        <div className="grid gap-5 md:grid-cols-2">
-          {(tri?.modules || []).map((m) => <ModuleCard key={m.module} module={m} />)}
-        </div>
-      </section>
+      <Section tone="amber">
+        <section>
+          <SectionTitle
+            eyebrow="Step 1 · Patterns"
+            title="What the monitoring modules found"
+            right={<button onClick={() => openCheckin()} className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs text-ink-soft hover:bg-brand-50/60"><ClipboardCheck size={14} /> Add symptoms</button>}
+          />
+          <div className="grid gap-5 md:grid-cols-2">
+            {(tri?.modules || []).map((m) => <ModuleCard key={m.module} module={m} />)}
+          </div>
+        </section>
+      </Section>
 
       {/* 4. Vitals vs personal baseline */}
-      <section>
-        <SectionTitle
-          eyebrow="Step 2 · Your numbers"
-          title="Your vitals against your personal baseline"
-          right={<Segmented options={Object.keys(PERIOD)} value={period} onChange={setPeriod} />}
-        />
-        {vitals.length ? (
-          <div className="grid gap-5 md:grid-cols-2">
-            {vitals.map((v) => <VitalInsightCard key={v.key} vital={v} avgLabel={demo ? '7-day avg' : 'your baseline'} />)}
-          </div>
-        ) : (
-          <p className="card p-6 text-sm text-ink-soft">{trends === null && !demo ? 'Loading…' : 'No readings in this period yet.'}</p>
-        )}
-      </section>
+      <Section tone="teal">
+        <section>
+          <SectionTitle
+            eyebrow="Step 2 · Your numbers"
+            title="Your vitals against your personal baseline"
+            right={<Segmented options={Object.keys(PERIOD)} value={period} onChange={setPeriod} />}
+          />
+          {vitals.length ? (
+            <div className="grid gap-5 md:grid-cols-2">
+              {vitals.map((v) => <VitalInsightCard key={v.key} vital={v} avgLabel={demo ? '7-day avg' : 'your baseline'} />)}
+            </div>
+          ) : (
+            <p className="card p-6 text-sm text-ink-soft">{trends === null && !demo ? 'Loading…' : 'No readings in this period yet.'}</p>
+          )}
+        </section>
+      </Section>
 
       {/* 5. What to do + triage history */}
-      <section>
-        <SectionTitle eyebrow="Step 3 · What you can do" title="Suggestions & history" />
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Card eyebrow="Suggestions" title="Simple things that help">
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {TIPS.map((t) => {
-                const Icon = TIP_ICON[t.icon];
-                return (
-                  <li key={t.title} className="rounded-xl border border-line p-4">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon size={16} /></span>
-                    <p className="mt-3 text-sm font-medium">{t.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-ink-soft">{t.text}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
+      <Section tone="violet">
+        <section>
+          <SectionTitle eyebrow="Step 3 · What you can do" title="Suggestions & history" />
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card eyebrow="Suggestions" title="Simple things that help">
+              <ul className="grid gap-4 sm:grid-cols-2">
+                {TIPS.map((t) => {
+                  const Icon = TIP_ICON[t.icon];
+                  return (
+                    <li key={t.title} className="rounded-xl border border-line p-4">
+                      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon size={16} /></span>
+                      <p className="mt-3 text-sm font-medium">{t.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-ink-soft">{t.text}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
 
-          <Card eyebrow="Longitudinal" title="Triage history">
-            {tri?.history?.length ? (
-              <ol className="relative space-y-4 border-l border-line pl-5">
-                {tri.history.map((h) => (
-                  <li key={`${h.ts}-${h.level}`} className="relative">
-                    <span className={`absolute -left-[26px] top-1 h-3 w-3 rounded-full border-2 border-white ${LEVEL_STYLE[h.level].bar}`} />
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      {h.prevLevel && <><TriageBadge level={h.prevLevel} /><span className="text-ink-mute">→</span></>}
-                      <TriageBadge level={h.level} />
-                    </div>
-                    <p className="mt-1 text-xs text-ink-mute">{new Date(h.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
-                  </li>
-                ))}
-              </ol>
-            ) : <p className="text-sm text-ink-soft">Level changes will appear here.</p>}
-          </Card>
-        </div>
-      </section>
+            <Card eyebrow="Longitudinal" title="Triage history">
+              {tri?.history?.length ? (
+                <ol className="relative space-y-4 border-l border-line pl-5">
+                  {tri.history.map((h) => (
+                    <li key={`${h.ts}-${h.level}`} className="relative">
+                      <span className={`absolute -left-[26px] top-1 h-3 w-3 rounded-full border-2 border-white ${LEVEL_STYLE[h.level].bar}`} />
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        {h.prevLevel && <><TriageBadge level={h.prevLevel} /><span className="text-ink-mute">→</span></>}
+                        <TriageBadge level={h.level} />
+                      </div>
+                      <p className="mt-1 text-xs text-ink-mute">{new Date(h.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className="text-sm text-ink-soft">Level changes will appear here.</p>}
+            </Card>
+          </div>
+        </section>
+      </Section>
 
       {/* 6. Transparency */}
-      <section className="card grid gap-6 p-6 md:grid-cols-3">
-        <div className="flex gap-3">
-          <Database size={18} className="mt-0.5 shrink-0 text-brand-600" />
-          <div>
-            <p className="text-sm font-medium">Data used</p>
-            <p className="mt-1 text-xs text-ink-soft">Measured sensor data, your reported answers and check-ins, and values estimated from your history — each labelled with its source and confidence.</p>
+      <Section tone="slate" className="!p-2 sm:!p-3">
+        <section className="card grid gap-6 p-6 md:grid-cols-3">
+          <div className="flex gap-3">
+            <Database size={18} className="mt-0.5 shrink-0 text-brand-600" />
+            <div>
+              <p className="text-sm font-medium">Data used</p>
+              <p className="mt-1 text-xs text-ink-soft">Measured sensor data, your reported answers and check-ins, and values estimated from your history — each labelled with its source and confidence.</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <Info size={18} className="mt-0.5 shrink-0 text-brand-600" />
-          <div>
-            <p className="text-sm font-medium">How it works</p>
-            <p className="mt-1 text-xs text-ink-soft">Collect → analyse → detect deviation from your baseline → ask for missing information → update → reanalyse, every 24-hour cycle.</p>
+          <div className="flex gap-3">
+            <Info size={18} className="mt-0.5 shrink-0 text-brand-600" />
+            <div>
+              <p className="text-sm font-medium">How it works</p>
+              <p className="mt-1 text-xs text-ink-soft">Collect → analyse → detect deviation from your baseline → ask for missing information → update → reanalyse, every 24-hour cycle.</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <ShieldCheck size={18} className="mt-0.5 shrink-0 text-brand-600" />
-          <div>
-            <p className="text-sm font-medium">Not a diagnosis</p>
-            <p className="mt-1 text-xs text-ink-soft">Prototype risk/triage information only. It is not clinically validated. Consult a healthcare professional for medical advice.</p>
+          <div className="flex gap-3">
+            <ShieldCheck size={18} className="mt-0.5 shrink-0 text-brand-600" />
+            <div>
+              <p className="text-sm font-medium">Not a diagnosis</p>
+              <p className="mt-1 text-xs text-ink-soft">Prototype risk/triage information only. It is not clinically validated. Consult a healthcare professional for medical advice.</p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </Section>
     </div>
   );
 }

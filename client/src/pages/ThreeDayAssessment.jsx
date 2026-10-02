@@ -4,7 +4,7 @@ import {
   ArrowLeft, ArrowRight, ArrowDown, ShieldCheck, Moon, Activity, HeartPulse, Droplets, Wind, Thermometer, Repeat, Eye, Lightbulb,
   HelpCircle, ChevronDown, Target, CalendarHeart, ClipboardCheck, Stethoscope, Database, RefreshCw, Info, CircleDot,
 } from 'lucide-react';
-import Card from '../components/common/Card.jsx';
+import Section, { StepNav } from '../components/common/Section.jsx';
 import ConnectionUnavailable from '../components/common/ConnectionUnavailable.jsx';
 import QuestionCard from '../components/questions/QuestionCard.jsx';
 import EvidenceModal, { ProvenancePill } from '../components/assessment/EvidenceModal.jsx';
@@ -45,56 +45,10 @@ const STATUS = {
   no_data: { text: 'No data', cls: 'bg-canvas text-ink-mute' },
 };
 
-// Each part of the story has its own number + colour so sections are easy to tell apart.
-const TONES = {
-  indigo: { panel: 'border-indigo-100 bg-indigo-50/50', badge: 'bg-indigo-600', icon: 'bg-indigo-100 text-indigo-700', eyebrow: 'text-indigo-700', bar: 'bg-indigo-500' },
-  teal: { panel: 'border-brand-100 bg-brand-50/50', badge: 'bg-brand-600', icon: 'bg-brand-100 text-brand-700', eyebrow: 'text-brand-700', bar: 'bg-brand-500' },
-  amber: { panel: 'border-amber-100 bg-amber-50/50', badge: 'bg-amber-500', icon: 'bg-amber-100 text-amber-700', eyebrow: 'text-amber-700', bar: 'bg-amber-500' },
-  violet: { panel: 'border-violet-100 bg-violet-50/50', badge: 'bg-violet-600', icon: 'bg-violet-100 text-violet-700', eyebrow: 'text-violet-700', bar: 'bg-violet-500' },
-  rose: { panel: 'border-rose-100 bg-rose-50/50', badge: 'bg-rose-500', icon: 'bg-rose-100 text-rose-600', eyebrow: 'text-rose-600', bar: 'bg-rose-500' },
-  sky: { panel: 'border-sky-100 bg-sky-50/50', badge: 'bg-sky-600', icon: 'bg-sky-100 text-sky-700', eyebrow: 'text-sky-700', bar: 'bg-sky-500' },
-  slate: { panel: 'border-line bg-white/60', badge: 'bg-ink-soft', icon: 'bg-canvas text-ink-soft', eyebrow: 'text-ink-soft', bar: 'bg-ink-mute' },
-};
-
-function Section({ id, n, tone = 'slate', icon: Icon, eyebrow, title, subtitle, children, className = '' }) {
-  const t = TONES[tone];
-  return (
-    <section id={id} className={`scroll-mt-28 rounded-3xl border p-4 sm:p-6 ${t.panel} ${className}`}>
-      <div className="mb-5 flex items-start gap-3">
-        {n != null && <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold text-white shadow-sm ${t.badge}`}>{n}</span>}
-        <div className="min-w-0 flex-1">
-          {eyebrow && <p className={`text-[11px] font-semibold uppercase tracking-wider ${t.eyebrow}`}>{eyebrow}</p>}
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-sm text-ink-soft">{subtitle}</p>}
-        </div>
-        {Icon && <span className={`hidden h-10 w-10 shrink-0 place-items-center rounded-xl sm:grid ${t.icon}`}><Icon size={19} /></span>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
 const STEPS = [
   ['happened', 'What happened'], ['changed', 'What changed'], ['patterns', 'Patterns'], ['matters', 'Why it matters'],
   ['todo', 'What to do'], ['evaluation', 'Evaluation'], ['next', 'Next 24h'], ['questions', 'Questions'], ['quality', 'Data quality'],
 ];
-
-function StepNav({ hasCycle }) {
-  const steps = hasCycle ? [...STEPS.slice(0, 4), ['cycle', 'Cycle'], ...STEPS.slice(4)] : STEPS;
-  return (
-    <nav aria-label="Assessment sections" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <ol className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
-        {steps.map(([id, label], i) => (
-          <li key={id}>
-            <a href={`#${id}`} className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-xs text-ink-soft shadow-card hover:border-brand-300 hover:text-brand-800">
-              <span className="grid h-4 w-4 place-items-center rounded-full bg-canvas text-[10px] font-semibold text-ink">{i + 1}</span>{label}
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  );
-}
 
 function Collapsible({ title, children, defaultOpen = false, icon: Icon = Info }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -148,7 +102,7 @@ export default function ThreeDayAssessment() {
         </div>
       </header>
 
-      {a.sufficient && <StepNav hasCycle={a.cycle_context?.enabled} />}
+      {a.sufficient && <StepNav steps={a.cycle_context?.enabled ? [...STEPS.slice(0, 4), ['cycle', 'Cycle'], ...STEPS.slice(4)] : STEPS} />}
 
       {!a.sufficient ? (
         <section className="card p-6 text-center">

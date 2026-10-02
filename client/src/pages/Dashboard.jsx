@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, ShieldCheck, MessageCircleQuestion, HeartPulse, Activity } from 'lucide-react';
+import Section from '../components/common/Section.jsx';
 import useOverview from '../hooks/useOverview.js';
 import useQuestions from '../hooks/useQuestions.js';
 import useTriage from '../hooks/useTriage.js';
@@ -58,7 +59,7 @@ export default function Dashboard() {
   const focus = tri?.loop?.next || data.focus;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Greeting */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -78,57 +79,58 @@ export default function Dashboard() {
       </div>
 
       {/* 1. How am I doing? */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <MonitoringStatus status={data.status} triage={triage} changed={tri?.current?.changed} />
-        <TodayCard today={data.today} baseline={data.baseline} lastCycle={data.lastCycle} />
-      </div>
+      <Section tone="teal" icon={ShieldCheck} eyebrow="Your status" title="How you're doing today">
+        <div className="grid gap-5 lg:grid-cols-3">
+          <MonitoringStatus status={data.status} triage={triage} changed={tri?.current?.changed} />
+          <TodayCard today={data.today} baseline={data.baseline} lastCycle={data.lastCycle} />
+        </div>
+      </Section>
 
       {/* 2. What do you need from me? */}
       {questions?.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="eyebrow">Needs your input</p>
-              <h2 className="mt-2 text-xl font-medium">{questions.length === 1 ? 'One question for you' : `${questions.length} questions for you`}</h2>
-            </div>
-            {questions.length > 2 && <Link to="/alerts" className="text-xs text-brand-700 hover:underline">See all →</Link>}
-          </div>
+        <Section
+          tone="amber" icon={MessageCircleQuestion} eyebrow="Needs your input"
+          title={questions.length === 1 ? 'One question for you' : `${questions.length} questions for you`}
+          action={questions.length > 2 && <Link to="/alerts" className="self-center text-xs font-medium text-amber-800 hover:underline">See all →</Link>}
+        >
           <div className={`grid gap-4 ${questions.length > 1 ? 'lg:grid-cols-2' : ''}`}>
             {questions.slice(0, 2).map((q) => <QuestionCard key={q.id} question={q} compact={questions.length > 1} onDone={reload} />)}
           </div>
-        </section>
+        </Section>
       )}
 
       {/* Cycle context (only when the user enabled menstrual cycle tracking) */}
-      {cycle?.tracking && <CycleHealthCard cycle={cycle} />}
+      {cycle?.tracking && (
+        <Section tone="rose" className="!p-2 sm:!p-3">
+          <CycleHealthCard cycle={cycle} />
+        </Section>
+      )}
 
       {/* 3. My numbers, compared with my own baseline */}
-      <section>
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <p className="eyebrow">Measured data</p>
-            <h2 className="mt-2 text-xl font-medium">Current measurements</h2>
-          </div>
-          <span className="text-xs text-ink-mute">
-            {data.baseline?.established ? 'Compared with your personal baseline' : 'Compared with standard ranges until your baseline is learned'}
-          </span>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <Section
+        tone="teal" icon={HeartPulse} eyebrow="Measured data" title="Current measurements"
+        subtitle={data.baseline?.established ? 'Compared with your personal baseline' : 'Compared with standard ranges until your baseline is learned'}
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {data.vitals.map((v) => <VitalCard key={v.key} vital={v} />)}
         </div>
-      </section>
+      </Section>
 
       {/* 4. What is being watched */}
-      <div className="grid items-start gap-5 lg:grid-cols-3">
-        <HeartRateChart />
-        <div className="space-y-5">
-          <FocusCard focus={focus} />
-          <WearableCard device={data.device} />
+      <Section tone="indigo" icon={Activity} eyebrow="Adaptive monitoring" title="What's being watched" subtitle="Your heart-rate trend and what the watch prioritises next.">
+        <div className="grid items-start gap-5 lg:grid-cols-3">
+          <HeartRateChart />
+          <div className="space-y-5">
+            <FocusCard focus={focus} />
+            <WearableCard device={data.device} />
+          </div>
         </div>
-      </div>
+      </Section>
 
       {/* 5. What happened */}
-      <RecentEvents />
+      <Section tone="slate" className="!p-2 sm:!p-3">
+        <RecentEvents />
+      </Section>
     </div>
   );
 }
